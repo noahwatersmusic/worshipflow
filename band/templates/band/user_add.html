@@ -1,0 +1,52 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Add User - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Add New User</h2>
+
+<div class="card">
+    <p style="color: #7f8c8d; margin-bottom: 20px;">A temporary password will be generated and emailed to the user. They will set their own password on first login.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 600px;">
+            <div style="grid-column: 1 / -1;">
+                <label for="email" style="display: block; font-weight: 600; margin-bottom: 5px;">Email Address *</label>
+                <input type="email" id="email" name="email" required style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;" placeholder="user@example.com">
+                <p style="color: #95a5a6; font-size: 12px; margin-top: 4px;">This will be used as their login.</p>
+            </div>
+            <div>
+                <label for="first_name" style="display: block; font-weight: 600; margin-bottom: 5px;">First Name</label>
+                <input type="text" id="first_name" name="first_name" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div>
+                <label for="last_name" style="display: block; font-weight: 600; margin-bottom: 5px;">Last Name</label>
+                <input type="text" id="last_name" name="last_name" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            {% if is_superadmin %}
+            <div>
+                <label for="church" style="display: block; font-weight: 600; margin-bottom: 5px;">Church</label>
+                <select id="church" name="church" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="">-- No Church --</option>
+                    {% for church in churches %}
+                    <option value="{{ church.id }}">{{ church.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="app_role" style="display: block; font-weight: 600; margin-bottom: 5px;">Role</label>
+                <select id="app_role" name="app_role" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    {% for value, label in role_choices %}
+                    <option value="{{ value }}" {% if value == 'user' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <div style="margin-top: 20px;">
+            <button type="submit" style="background: #27ae60;">Create User</button>
+            <a href="{% url 'band:user_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

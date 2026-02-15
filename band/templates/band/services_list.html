@@ -1,0 +1,71 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Services - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Services
+    {% if is_admin %}
+    <a href="{% url 'band:service_add' %}" class="btn" style="float: right; background: #27ae60; font-size: 14px;">+ Add New Service</a>
+    {% endif %}
+</h2>
+
+<div class="card">
+    <h3>Filter Services</h3>
+    <form method="get" action="">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+            <div class="filter-group">
+                <label for="search">Search</label>
+                <input type="text" id="search" name="search" value="{{ request.GET.search }}" placeholder="Service name or ID...">
+            </div>
+            <div class="filter-group">
+                <label for="date_from">From Date</label>
+                <input type="date" id="date_from" name="date_from" value="{{ request.GET.date_from }}">
+            </div>
+            <div class="filter-group">
+                <label for="date_to">To Date</label>
+                <input type="date" id="date_to" name="date_to" value="{{ request.GET.date_to }}">
+            </div>
+            <div>
+                <button type="submit">Filter</button>
+                {% if request.GET %}
+                <a href="{% url 'band:services_list' %}" style="margin-left: 10px; color: #7f8c8d;">Clear</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>All Services ({{ services|length }})</h3>
+
+    {% if services %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Service Name</th>
+                <th>Plan ID</th>
+                <th>Songs</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for service in services %}
+            <tr>
+                <td><strong>{{ service.service_date|date:"M d, Y" }}</strong></td>
+                <td>{{ service.service_name }}</td>
+                <td><span class="badge badge-info">{{ service.plan_id }}</span></td>
+                <td>{{ service.song_count }} song{{ service.song_count|pluralize }}</td>
+                <td>
+                    <a href="{% url 'band:service_detail' service.plan_id %}" class="btn" style="padding: 4px 10px; font-size: 12px;">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #7f8c8d;"><em>No services found. Import services using the Import page.</em></p>
+    {% endif %}
+</div>
+
+{% endblock %}

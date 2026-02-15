@@ -1,0 +1,48 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Churches - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Churches
+    <a href="{% url 'band:church_add' %}" class="btn" style="float: right; background: #27ae60; font-size: 14px;">+ Add New Church</a>
+</h2>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Users</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for church in churches %}
+            <tr>
+                <td><strong>{{ church.name }}</strong></td>
+                <td>{{ church.slug }}</td>
+                <td>{{ church.user_count }}</td>
+                <td>
+                    {% if church.is_active %}
+                    <span class="badge badge-success">Active</span>
+                    {% else %}
+                    <span class="badge badge-warning">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ church.created_at|date:"M d, Y" }}</td>
+                <td>
+                    <a href="{% url 'band:church_edit' church.id %}" class="btn" style="padding: 4px 12px; font-size: 12px; background: #f39c12;">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #7f8c8d;">No churches yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

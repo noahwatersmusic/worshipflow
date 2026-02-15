@@ -1,0 +1,197 @@
+{% extends 'band/base.html' %}
+
+{% block title %}{{ song.title }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>{{ song.title }}</h2>
+
+<!-- View Mode -->
+<div id="view-mode">
+    <div class="card">
+        <h3>Song Information
+            {% if is_admin %}
+            <span style="float: right;">
+                <button type="button" onclick="enterEditMode()" style="background: #f39c12; padding: 5px 15px; font-size: 12px;">Edit</button>
+                <a href="{% url 'band:song_delete' song.song_id %}" class="btn" style="background: #e74c3c; padding: 5px 15px; font-size: 12px; margin-left: 5px;">Delete</a>
+            </span>
+            {% endif %}
+        </h3>
+        <p><strong>Song ID:</strong> {{ song.song_id }}</p>
+        {% if song.artist %}<p><strong>Artist:</strong> {{ song.artist }}</p>{% endif %}
+        <p><strong>Default Key:</strong> <span class="badge badge-info">{{ song.default_key }}</span></p>
+        {% if song.tempo %}<p><strong>Tempo:</strong> {{ song.get_tempo_display }}{% if song.bpm %} ({{ song.bpm }} BPM){% endif %}</p>{% endif %}
+        {% if song.style %}<p><strong>Style:</strong> {{ song.style }}</p>{% endif %}
+    </div>
+
+    {% if song.computed_last_used or song.computed_times_used or song.comfort_level %}
+    <div class="card">
+        <h3>Usage Statistics</h3>
+        {% if song.computed_last_used %}<p><strong>Last Used:</strong> {{ song.computed_last_used|date:"M d, Y" }}</p>{% endif %}
+        <p><strong>Times Used:</strong> {{ song.computed_times_used }}</p>
+        {% if song.comfort_level %}<p><strong>Comfort Level:</strong> {{ song.comfort_level }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if song.arrangement_notes %}
+    <div class="card">
+        <h3>Arrangement Notes</h3>
+        <p>{{ song.arrangement_notes }}</p>
+    </div>
+    {% endif %}
+
+    {% if song.notes %}
+    <div class="card">
+        <h3>Notes</h3>
+        <p>{{ song.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Mode -->
+<div id="edit-mode" style="display: none;">
+    <form id="edit-form" method="post" action="{% url 'band:song_edit_review' song.song_id %}">
+        {% csrf_token %}
+
+        <div class="card">
+            <h3>Song Information
+                <button type="button" onclick="cancelEdit()" style="float: right; background: #95a5a6; padding: 5px 15px; font-size: 12px;">Cancel</button>
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="filter-group">
+                    <label for="song_id">Song ID</label>
+                    <input type="text" id="song_id" value="{{ song.song_id }}" readonly style="background: #eee; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" name="title" value="{{ song.title }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="artist">Artist</label>
+                    <input type="text" id="artist" name="artist" value="{{ song.artist|default:'' }}" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="default_key">Default Key *</label>
+                    <input type="text" id="default_key" name="default_key" value="{{ song.default_key }}" required placeholder="e.g., D, G, Bb" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="tempo">Tempo</label>
+                    <select id="tempo" name="tempo" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                        <option value="">-- Select --</option>
+                        {% for value, label in tempo_choices %}
+                        <option value="{{ value }}" {% if song.tempo == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="bpm">BPM</label>
+                    <input type="number" id="bpm" name="bpm" value="{{ song.bpm|default:'' }}" placeholder="e.g., 120" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="style">Style</label>
+                    <input type="text" id="style" name="style" value="{{ song.style|default:'' }}" placeholder="e.g., Contemporary, Hymn, Gospel" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Additional Details</h3>
+            <div style="margin-top: 15px;">
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="comfort_level">Comfort Level</label>
+                    <input type="text" id="comfort_level" name="comfort_level" value="{{ song.comfort_level|default:'' }}" placeholder="e.g., High, Medium, Learning" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="arrangement_notes">Arrangement Notes</label>
+                    <textarea id="arrangement_notes" name="arrangement_notes" rows="3" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ song.arrangement_notes|default:'' }}</textarea>
+                </div>
+                <div class="filter-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" rows="3" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ song.notes|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Save Changes</h3>
+            <p>Click "Review Changes" to see a summary of your changes before saving.</p>
+            <div style="margin-top: 15px;">
+                <button type="submit" style="background: #27ae60;">Review Changes</button>
+                <button type="button" onclick="cancelEdit()" style="background: #95a5a6; margin-left: 10px;">Cancel</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if can_lead %}
+<div class="card">
+    <h3>Can Lead This Song</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Preferred Key</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in can_lead %}
+            <tr>
+                <td><a href="{% url 'band:person_detail' pref.person.person_id %}">{{ pref.person.name }}</a></td>
+                <td><strong>{{ pref.preferred_key }}</strong></td>
+                <td>
+                    {% if pref.confidence == 'high' %}<span class="badge badge-success">High</span>
+                    {% elif pref.confidence == 'medium' %}<span class="badge badge-warning">Medium</span>
+                    {% elif pref.confidence == 'low' %}<span class="badge badge-info">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if cannot_lead %}
+<div class="card">
+    <h3>Can Perform (But Not Lead)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Preferred Key</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in cannot_lead %}
+            <tr>
+                <td><a href="{% url 'band:person_detail' pref.person.person_id %}">{{ pref.person.name }}</a></td>
+                <td><strong>{{ pref.preferred_key }}</strong></td>
+                <td>
+                    {% if pref.confidence == 'high' %}<span class="badge badge-success">High</span>
+                    {% elif pref.confidence == 'medium' %}<span class="badge badge-warning">Medium</span>
+                    {% elif pref.confidence == 'low' %}<span class="badge badge-info">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<p><a href="{% url 'band:songs_list' %}">&larr; Back to Songs</a></p>
+
+<script>
+function enterEditMode() {
+    document.getElementById('view-mode').style.display = 'none';
+    document.getElementById('edit-mode').style.display = 'block';
+}
+
+function cancelEdit() {
+    document.getElementById('edit-mode').style.display = 'none';
+    document.getElementById('view-mode').style.display = 'block';
+}
+</script>
+
+{% endblock %}

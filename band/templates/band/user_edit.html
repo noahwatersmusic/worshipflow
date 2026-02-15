@@ -1,0 +1,71 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Edit {{ target_user.email }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Edit User: {{ target_user.email }}</h2>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 600px;">
+            <div style="grid-column: 1 / -1;">
+                <label for="email" style="display: block; font-weight: 600; margin-bottom: 5px;">Email Address (login)</label>
+                <input type="email" id="email" name="email" value="{{ target_user.email }}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div>
+                <label for="first_name" style="display: block; font-weight: 600; margin-bottom: 5px;">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ target_user.first_name }}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div>
+                <label for="last_name" style="display: block; font-weight: 600; margin-bottom: 5px;">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ target_user.last_name }}" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            </div>
+            {% if is_superadmin %}
+            <div>
+                <label for="church" style="display: block; font-weight: 600; margin-bottom: 5px;">Church</label>
+                <select id="church" name="church" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="">-- No Church --</option>
+                    {% for church in churches %}
+                    <option value="{{ church.id }}" {% if profile.church_id == church.id %}selected{% endif %}>{{ church.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="app_role" style="display: block; font-weight: 600; margin-bottom: 5px;">Role</label>
+                <select id="app_role" name="app_role" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    {% for value, label in role_choices %}
+                    <option value="{{ value }}" {% if profile.app_role == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div style="grid-column: 1 / -1;">
+                <label for="new_password" style="display: block; font-weight: 600; margin-bottom: 5px;">Reset Password (leave blank to keep current)</label>
+                <div style="position: relative;">
+                    <input type="password" id="new_password" name="new_password" style="width: 100%; padding: 8px 12px; padding-right: 40px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <button type="button" onclick="togglePassword('new_password', this)" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7f8c8d; cursor: pointer; padding: 2px 4px; font-size: 13px;">Show</button>
+                </div>
+                <p style="color: #95a5a6; font-size: 12px; margin-top: 4px;">If set, the user will be required to change it on next login.</p>
+            </div>
+        </div>
+        <div style="margin-top: 20px;">
+            <button type="submit" style="background: #27ae60;">Save Changes</button>
+            <a href="{% url 'band:user_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function togglePassword(inputId, btn) {
+    var input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Hide';
+    } else {
+        input.type = 'password';
+        btn.textContent = 'Show';
+    }
+}
+</script>
+{% endblock %}

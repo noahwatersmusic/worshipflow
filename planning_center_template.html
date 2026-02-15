@@ -1,0 +1,61 @@
+<html>
+<head>
+    <title>Service Export</title>
+    <style>
+        * { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+        body { padding: 10px; margin: 0; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+        }
+        td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+
+    <table>
+        <tbody>
+            {% assign song_order = 0 %}
+            {% for item in plan.items %}
+                {% if item.song %}
+                    {% assign song_order = song_order | plus: 1 %}
+                    <tr>
+                        <td>{{ plan.dates }}</td>
+                        <td>{{ plan.ministry.name }}{% if plan.plan_title %} - {{ plan.plan_title }}{% endif %}</td>
+                        <td class="center">{{ song_order }}</td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.song.author }}</td>
+                        <td class="center">{{ item.arrangement.music_key }}</td>
+                        <td class="center">{{ item.length }}</td>
+                        <td>{{ item.description }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if plan.notes.size > 0 %}
+        <table style="margin-top: 20px;">
+            <tbody>
+                {% for note in plan.notes %}
+                    <tr>
+                        <td>{{ note.category_name }}</td>
+                        <td>{{ note.note }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+</body>
+</html>

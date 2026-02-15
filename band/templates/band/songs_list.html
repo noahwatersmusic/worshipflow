@@ -1,0 +1,70 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Songs - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Song Library
+    {% if is_admin %}
+    <a href="{% url 'band:song_add' %}" class="btn" style="float: right; background: #27ae60; font-size: 14px; margin-left: 10px;">+ Add New Song</a>
+    <form method="post" action="{% url 'band:refresh_song_keys' %}" style="float: right; display: inline;" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Refreshing...';">
+        {% csrf_token %}
+        <button type="submit" class="btn" style="background: #8e44ad; font-size: 14px;">Refresh Keys</button>
+    </form>
+    {% endif %}
+</h2>
+
+<div class="filters">
+    <form method="get">
+        <div class="filter-group">
+            <label for="search">Search</label>
+            <input type="text" id="search" name="search" placeholder="Title or artist..." value="{{ request.GET.search }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="key">Key</label>
+            <select name="key" id="key">
+                <option value="">All Keys</option>
+                {% for k in all_keys %}
+                <option value="{{ k }}" {% if request.GET.key == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Key</th>
+                <th>Last Used</th>
+                <th>Times Used</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for song in songs %}
+            <tr>
+                <td><strong>{{ song.title }}</strong></td>
+                <td>{{ song.artist }}</td>
+                <td><span class="badge badge-info">{{ song.default_key }}</span></td>
+                <td>{{ song.computed_last_used|date:"M d, Y"|default:"—" }}</td>
+                <td>{{ song.computed_times_used }}</td>
+                <td><a href="{% url 'band:song_detail' song.song_id %}">View Details</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No songs found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

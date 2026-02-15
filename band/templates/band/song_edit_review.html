@@ -1,0 +1,111 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Review Changes - {{ song.title }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Review Changes for {{ song.title }}</h2>
+
+<p>Please review the changes below before confirming. Changes are highlighted in <span style="background: #fff3cd; padding: 2px 6px;">yellow</span>.</p>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'band:song_edit_confirm' song.song_id %}">
+    {% csrf_token %}
+    <!-- Hidden fields to pass data to confirm view -->
+    <input type="hidden" name="title" value="{{ new_data.title }}">
+    <input type="hidden" name="artist" value="{{ new_data.artist }}">
+    <input type="hidden" name="default_key" value="{{ new_data.default_key }}">
+    <input type="hidden" name="tempo" value="{{ new_data.tempo }}">
+    <input type="hidden" name="bpm" value="{{ new_data.bpm }}">
+    <input type="hidden" name="style" value="{{ new_data.style }}">
+    <input type="hidden" name="arrangement_notes" value="{{ new_data.arrangement_notes }}">
+    <input type="hidden" name="comfort_level" value="{{ new_data.comfort_level }}">
+    <input type="hidden" name="notes" value="{{ new_data.notes }}">
+
+    <div class="card">
+        <h3>Changes Summary</h3>
+        {% if changes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Current Value</th>
+                        <th>New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in changes %}
+                    <tr style="background: #fff3cd;">
+                        <td><strong>{{ change.field }}</strong></td>
+                        <td>{{ change.old_value|default:"(empty)" }}</td>
+                        <td>{{ change.new_value|default:"(empty)" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: #7f8c8d;"><em>No changes detected.</em></p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Full Record Preview</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <h4 style="color: #7f8c8d; margin-bottom: 10px;">Song Information</h4>
+                <p><strong>Song ID:</strong> {{ song.song_id }}</p>
+                <p {% if 'Title' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Title:</strong> {{ new_data.title }}</p>
+                <p {% if 'Artist' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Artist:</strong> {{ new_data.artist|default:"(not specified)" }}</p>
+                <p {% if 'Default Key' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Default Key:</strong> {{ new_data.default_key }}</p>
+            </div>
+            <div>
+                <h4 style="color: #7f8c8d; margin-bottom: 10px;">Additional Details</h4>
+                <p {% if 'Tempo' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Tempo:</strong> {{ new_data.tempo_display|default:"(not specified)" }}</p>
+                <p {% if 'BPM' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>BPM:</strong> {{ new_data.bpm|default:"(not specified)" }}</p>
+                <p {% if 'Style' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Style:</strong> {{ new_data.style|default:"(not specified)" }}</p>
+                <p {% if 'Comfort Level' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Comfort Level:</strong> {{ new_data.comfort_level|default:"(not specified)" }}</p>
+            </div>
+        </div>
+
+        {% if new_data.arrangement_notes %}
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Arrangement Notes</h4>
+            <p {% if 'Arrangement Notes' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}>{{ new_data.arrangement_notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if new_data.notes %}
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Notes</h4>
+            <p {% if 'Notes' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}>{{ new_data.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Confirm Changes</h3>
+        {% if changes %}
+            <p>Are you sure you want to save these {{ changes|length }} change(s)?</p>
+            <div style="margin-top: 15px;">
+                <button type="submit" style="background: #27ae60;">Confirm and Save</button>
+                <a href="{% url 'band:song_detail' song.song_id %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+            </div>
+        {% else %}
+            <p>No changes to save.</p>
+            <div style="margin-top: 15px;">
+                <a href="{% url 'band:song_detail' song.song_id %}" class="btn" style="background: #3498db;">Back to Song</a>
+            </div>
+        {% endif %}
+    </div>
+</form>
+
+{% endblock %}

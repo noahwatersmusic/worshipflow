@@ -1,0 +1,43 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Home - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>WorshipFlow Dashboard</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_people }}</div>
+        <div class="stat-label">Band Members</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_songs }}</div>
+        <div class="stat-label">Songs in Library</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ vocalists }}</div>
+        <div class="stat-label">Vocalists</div>
+    </div>
+</div>
+{% if recent_services %}
+<div class="card">
+    <h3>Recent Services</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Service Name</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for service in recent_services %}
+            <tr>
+                <td><a href="{% url 'band:service_detail' service.plan_id %}">{{ service.service_name }}</a></td>
+                <td>{{ service.service_date|date:"M d, Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Add Church - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Add New Church</h2>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="name" style="display: block; font-weight: 600; margin-bottom: 5px;">Church Name</label>
+            <input type="text" id="name" name="name" required style="width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
+        <button type="submit" style="background: #27ae60;">Create Church</button>
+        <a href="{% url 'band:church_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

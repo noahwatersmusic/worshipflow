@@ -1,0 +1,60 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Add Service - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Add New Service</h2>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'band:service_add' %}">
+    {% csrf_token %}
+
+    <div class="card">
+        <h3>Service Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="service_name">Service Name *</label>
+                <input type="text" id="service_name" name="service_name" required placeholder="e.g., Sunday Morning Worship" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+            <div class="filter-group">
+                <label for="service_date">Service Date *</label>
+                <input type="date" id="service_date" name="service_date" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Notes</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="band_notes">Band Notes</label>
+                <textarea id="band_notes" name="band_notes" rows="3" placeholder="Notes for the band" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+            </div>
+            <div class="filter-group">
+                <label for="service_notes">Service Notes</label>
+                <textarea id="service_notes" name="service_notes" rows="3" placeholder="General service notes" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            <em>You can add songs to this service after creating it.</em>
+        </p>
+        <div>
+            <button type="submit" style="background: #27ae60;">Add Service</button>
+            <a href="{% url 'band:services_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

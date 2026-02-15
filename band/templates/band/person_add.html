@@ -1,0 +1,111 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Add Band Member - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Add New Band Member</h2>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'band:person_add' %}">
+    {% csrf_token %}
+
+    <div class="card">
+        <h3>Basic Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+            <div class="filter-group">
+                <label for="role">Role *</label>
+                <select id="role" name="role" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                    <option value="">-- Select --</option>
+                    {% for value, label in role_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="frequency">Frequency</label>
+                <select id="frequency" name="frequency" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                    <option value="">-- Select --</option>
+                    {% for value, label in frequency_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Instruments</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="primary_instrument">Primary Instrument</label>
+                <input type="text" id="primary_instrument" name="primary_instrument" placeholder="e.g., Guitar, Piano, Drums" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+            <div class="filter-group">
+                <label for="secondary_instrument">Secondary Instrument</label>
+                <input type="text" id="secondary_instrument" name="secondary_instrument" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Vocal Abilities</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="lead_vocal" name="lead_vocal">
+                    Lead Vocal
+                </label>
+            </div>
+            <div class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="harmony_vocal" name="harmony_vocal">
+                    Harmony Vocal
+                </label>
+            </div>
+            <div class="filter-group">
+                <label for="preferred_keys">Preferred Keys</label>
+                <input type="text" id="preferred_keys" name="preferred_keys" placeholder="e.g., E, F, G, Bb" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Additional Information</h3>
+        <div style="margin-top: 15px;">
+            <div class="filter-group" style="margin-bottom: 15px;">
+                <label for="style_strengths">Style Strengths</label>
+                <textarea id="style_strengths" name="style_strengths" rows="2" placeholder="e.g., Contemporary, Hymns, Gospel" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+            </div>
+            <div class="filter-group" style="margin-bottom: 15px;">
+                <label for="availability">Availability</label>
+                <textarea id="availability" name="availability" rows="2" placeholder="e.g., Available most Sundays, not available in summer" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+            </div>
+            <div class="filter-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="margin-top: 10px;">
+            <button type="submit" style="background: #27ae60;">Add Band Member</button>
+            <a href="{% url 'band:people_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

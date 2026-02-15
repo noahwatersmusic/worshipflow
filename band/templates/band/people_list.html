@@ -1,0 +1,87 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Band Members - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Band Members
+    {% if is_admin %}
+    <a href="{% url 'band:person_add' %}" class="btn" style="float: right; background: #27ae60; font-size: 14px;">+ Add New Member</a>
+    {% endif %}
+</h2>
+
+<div class="filters">
+    <form method="get">
+        <div class="filter-group">
+            <label for="search">Search</label>
+            <input type="text" id="search" name="search" placeholder="Name or ID..." value="{{ request.GET.search }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="role">Role</label>
+            <select name="role" id="role">
+                <option value="">All Roles</option>
+                {% for value, label in role_choices %}
+                <option value="{{ value }}" {% if request.GET.role == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="vocal">Vocal</label>
+            <select name="vocal" id="vocal">
+                <option value="">Any</option>
+                <option value="lead" {% if request.GET.vocal == 'lead' %}selected{% endif %}>Lead Vocal</option>
+                <option value="harmony" {% if request.GET.vocal == 'harmony' %}selected{% endif %}>Harmony Vocal</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="frequency">Frequency</label>
+            <select name="frequency" id="frequency">
+                <option value="">All</option>
+                {% for value, label in frequency_choices %}
+                <option value="{{ value }}" {% if request.GET.frequency == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Primary Instrument</th>
+                <th>Lead Vocal</th>
+                <th>Harmony</th>
+                <th>Frequency</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for person in people %}
+            <tr>
+                <td><strong>{{ person.name }}</strong></td>
+                <td>{{ person.get_role_display }}</td>
+                <td>{{ person.primary_instrument }}</td>
+                <td>{% if person.lead_vocal %}<span class="badge badge-success">Yes</span>{% endif %}</td>
+                <td>{% if person.harmony_vocal %}<span class="badge badge-info">Yes</span>{% endif %}</td>
+                <td>{{ person.get_frequency_display }}</td>
+                <td><a href="{% url 'band:person_detail' person.person_id %}">View Details</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No band members found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

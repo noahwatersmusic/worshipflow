@@ -1,0 +1,146 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Import Services - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Import Services from CSV</h2>
+
+<div class="card">
+    <h3>Instructions</h3>
+    <ol style="line-height: 2;">
+        <li>Download the CSV template file below</li>
+        <li>Fill in your service information following the format</li>
+        <li>Upload the completed CSV file</li>
+        <li>The app will automatically generate Plan IDs for your services</li>
+    </ol>
+
+    <p style="margin-top: 20px;">
+        <a href="{% url 'band:download_csv_template' %}" class="btn">Download CSV Template</a>
+    </p>
+</div>
+
+<div class="card">
+    <h3>CSV Format Requirements</h3>
+    <table style="margin-top: 15px;">
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Required</th>
+                <th>Format</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Service Date</strong></td>
+                <td>Yes</td>
+                <td>YYYY-MM-DD</td>
+                <td>2025-02-02</td>
+            </tr>
+            <tr>
+                <td><strong>Service Name</strong></td>
+                <td>Yes</td>
+                <td>Text</td>
+                <td>Sunday Morning Worship</td>
+            </tr>
+            <tr>
+                <td><strong>Song Order</strong></td>
+                <td>No</td>
+                <td>Number (1, 2, 3...)</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td><strong>Song ID</strong></td>
+                <td>No</td>
+                <td>Unique identifier</td>
+                <td>S001</td>
+            </tr>
+            <tr>
+                <td><strong>Song Title</strong></td>
+                <td>No*</td>
+                <td>Text (*Required if song doesn't exist)</td>
+                <td>Trust in God</td>
+            </tr>
+            <tr>
+                <td><strong>Song Artist</strong></td>
+                <td>No</td>
+                <td>Text</td>
+                <td>Elevation Worship</td>
+            </tr>
+            <tr>
+                <td><strong>Song Default Key</strong></td>
+                <td>No*</td>
+                <td>Musical key (*Required if song doesn't exist, used as fallback if original key not found online)</td>
+                <td>D</td>
+            </tr>
+            <tr>
+                <td><strong>Key Used</strong></td>
+                <td>No</td>
+                <td>Musical key used in this service</td>
+                <td>D, G, A, etc.</td>
+            </tr>
+            <tr>
+                <td><strong>Length</strong></td>
+                <td>No</td>
+                <td>Number (minutes)</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td><strong>Lead Person ID</strong></td>
+                <td>No</td>
+                <td>Must match existing person</td>
+                <td>P004</td>
+            </tr>
+            <tr>
+                <td><strong>Band Notes</strong></td>
+                <td>No</td>
+                <td>Text</td>
+                <td>Start with slow intro</td>
+            </tr>
+            <tr>
+                <td><strong>Service Notes</strong></td>
+                <td>No</td>
+                <td>Text</td>
+                <td>Communion service</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Upload CSV File</h3>
+
+    {% if messages %}
+        <div style="margin-bottom: 20px;">
+            {% for message in messages %}
+                <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="csv_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select CSV File:</label>
+            <input type="file" id="csv_file" name="csv_file" accept=".csv" required style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
+        </div>
+        <button type="submit">Upload and Import</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Tips for Importing</h3>
+    <ul style="line-height: 2;">
+        <li><strong>Plan IDs are auto-generated</strong> - The app creates unique Plan IDs automatically</li>
+        <li><strong>Songs are auto-created</strong> - If a Song ID doesn't exist, the app will create it using Song Title, Song Artist, and Song Default Key</li>
+        <li><strong>Original keys fetched automatically</strong> - When creating new songs, the app searches the internet for the original key based on the title and artist. If found, it uses the original key instead of the CSV-provided key</li>
+        <li><strong>Grouping:</strong> Rows with the same Service Date and Service Name are grouped into one service</li>
+        <li>If a song already exists in your library, you can leave Song Title, Artist, and Default Key blank</li>
+        <li>Make sure all people (lead vocalists) exist in your band members list before importing</li>
+        <li>Each row can represent one song in a service</li>
+        <li>Use the Song Order field to specify the sequence of songs (1, 2, 3...)</li>
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Review Extracted Data - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Review Extracted Data</h2>
+
+<p>Please review the information extracted from the PDF. You can edit any fields before importing.</p>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'band:confirm_pdf_import' %}">
+    {% csrf_token %}
+    <input type="hidden" name="confirm_import" value="1">
+    <input type="hidden" name="song_count" value="{{ extracted.songs|length }}">
+
+    <div class="card">
+        <h3>Service Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="service_date">Service Date *</label>
+                <input type="date" id="service_date" name="service_date" value="{{ extracted.service_date }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+            </div>
+            <div class="filter-group">
+                <label for="service_name">Service Name *</label>
+                <input type="text" id="service_name" name="service_name" value="{{ extracted.service_name }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="band_notes">Band Notes</label>
+                <textarea id="band_notes" name="band_notes" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;"></textarea>
+            </div>
+            <div class="filter-group">
+                <label for="service_notes">Service Notes</label>
+                <textarea id="service_notes" name="service_notes" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Songs Detected ({{ extracted.songs|length }})</h3>
+
+        {% if extracted.songs %}
+            <p style="color: #7f8c8d; margin-bottom: 15px;">
+                <em>Edit song details below. New songs will be added to your library. Original keys will be fetched from the internet when possible.</em>
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Order</th>
+                        <th>Song Title</th>
+                        <th>Artist</th>
+                        <th style="width: 80px;">Key</th>
+                        <th>Lead Vocalist(s)</th>
+                        <th style="width: 60px;">Remove</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in extracted.songs %}
+                    <tr id="song_row_{{ forloop.counter0 }}">
+                        <td>
+                            <input type="number" name="song_order_{{ forloop.counter0 }}" value="{{ song.order }}" min="1" style="width: 50px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                        </td>
+                        <td>
+                            <input type="text" name="song_title_{{ forloop.counter0 }}" value="{{ song.title }}" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                        </td>
+                        <td>
+                            <input type="text" name="song_artist_{{ forloop.counter0 }}" value="{{ song.artist }}" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                        </td>
+                        <td>
+                            <input type="text" name="song_key_{{ forloop.counter0 }}" value="{{ song.key }}" placeholder="Auto" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                        </td>
+                        <td>
+                            <div id="leaders_container_{{ forloop.counter0 }}">
+                                <!-- Primary leader -->
+                                <div class="leader-row" style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                    <select name="lead_person_{{ forloop.counter0 }}_0" style="flex: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">-- Select --</option>
+                                        {% for person in people %}
+                                        <option value="{{ person.person_id }}" {% if song.matched_person_ids and person.person_id in song.matched_person_ids and forloop.first %}selected{% elif song.matched_person_id == person.person_id %}selected{% endif %}>{{ person.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if song.matched_person_ids and song.matched_person_ids|length > 1 %}
+                                    {% for pid in song.matched_person_ids %}
+                                        {% if not forloop.first %}
+                                <div class="leader-row" style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                    <select name="lead_person_{{ forloop.parentloop.counter0 }}_{{ forloop.counter }}" style="flex: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">-- Select --</option>
+                                        {% for person in people %}
+                                        <option value="{{ person.person_id }}" {% if person.person_id == pid %}selected{% endif %}>{{ person.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" onclick="this.parentElement.remove();" style="background: #e74c3c; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer;">X</button>
+                                </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <button type="button" onclick="addLeader({{ forloop.counter0 }})" style="background: #27ae60; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 3px;">+ Add Leader</button>
+                            {% if song.lead %}
+                            <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+                                Detected: {{ song.lead }}
+                                {% if song.parsed_leaders|length > 1 %}
+                                <span class="badge badge-success" style="font-size: 10px; padding: 2px 6px;">{{ song.parsed_leaders|length }} leaders</span>
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" onclick="document.getElementById('song_row_{{ forloop.counter0 }}').style.display='none'; document.getElementsByName('song_title_{{ forloop.counter0 }}')[0].value='';" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">X</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: #e74c3c;">No songs were detected in the PDF. You can still create the service, or go back and try a different PDF.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Confirm Import</h3>
+        <p>When you're satisfied with the extracted data, click the button below to import.</p>
+        <div style="margin-top: 15px;">
+            <button type="submit" style="background: #27ae60;">Confirm and Import Service</button>
+            <a href="{% url 'band:import_services' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+        </div>
+    </div>
+</form>
+
+{% if extracted.raw_text %}
+<div class="card" style="background: #f8f9fa;">
+    <h3>Raw Extracted Text</h3>
+    <details>
+        <summary style="cursor: pointer; margin-bottom: 10px;">Click to view the raw text from the PDF</summary>
+        <pre style="white-space: pre-wrap; font-size: 12px; max-height: 300px; overflow-y: auto; background: white; padding: 15px; border-radius: 4px;">{{ extracted.raw_text }}</pre>
+    </details>
+</div>
+{% endif %}
+
+<script>
+// Store people data for dynamic dropdown creation
+const peopleData = [
+    {% for person in people %}
+    { id: "{{ person.person_id }}", name: "{{ person.name }}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Track leader counts per song
+const leaderCounts = {};
+{% for song in extracted.songs %}
+leaderCounts[{{ forloop.counter0 }}] = {% if song.matched_person_ids %}{{ song.matched_person_ids|length }}{% else %}1{% endif %};
+{% endfor %}
+
+function addLeader(songIndex) {
+    const container = document.getElementById('leaders_container_' + songIndex);
+    const count = leaderCounts[songIndex] || 1;
+    leaderCounts[songIndex] = count + 1;
+
+    const div = document.createElement('div');
+    div.className = 'leader-row';
+    div.style.cssText = 'display: flex; gap: 5px; margin-bottom: 5px;';
+
+    let selectHtml = '<select name="lead_person_' + songIndex + '_' + count + '" style="flex: 1; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">';
+    selectHtml += '<option value="">-- Select --</option>';
+    peopleData.forEach(function(person) {
+        selectHtml += '<option value="' + person.id + '">' + person.name + '</option>';
+    });
+    selectHtml += '</select>';
+    selectHtml += '<button type="button" onclick="this.parentElement.remove();" style="background: #e74c3c; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer;">X</button>';
+
+    div.innerHTML = selectHtml;
+    container.appendChild(div);
+}
+</script>
+
+{% endblock %}

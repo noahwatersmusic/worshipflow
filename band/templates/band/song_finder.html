@@ -1,0 +1,84 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Song Finder - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Song Finder</h2>
+<p>Find songs by singer and preferred key</p>
+
+<div class="filters">
+    <form method="get">
+        <div class="filter-group">
+            <label for="person">Singer</label>
+            <select name="person" id="person" required>
+                <option value="">Select a singer...</option>
+                {% for p in people %}
+                <option value="{{ p.person_id }}" {% if request.GET.person == p.person_id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="key">Key (Optional)</label>
+            <select name="key" id="key">
+                <option value="">Any Key</option>
+                {% for k in all_keys %}
+                <option value="{{ k }}" {% if request.GET.key == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="can_lead">Can Lead?</label>
+            <select name="can_lead" id="can_lead">
+                <option value="">Any</option>
+                <option value="yes" {% if request.GET.can_lead == 'yes' %}selected{% endif %}>Can Lead</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit">Search</button>
+        </div>
+    </form>
+</div>
+
+{% if results %}
+<div class="card">
+    <h3>Songs for {{ selected_person.name }}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Song</th>
+                <th>Artist</th>
+                <th>Preferred Key</th>
+                <th>Default Key</th>
+                <th>Can Lead</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in results %}
+            <tr>
+                <td><a href="{% url 'band:song_detail' pref.song.song_id %}"><strong>{{ pref.song.title }}</strong></a></td>
+                <td>{{ pref.song.artist }}</td>
+                <td><span class="badge badge-success">{{ pref.preferred_key }}</span></td>
+                <td><span class="badge badge-info">{{ pref.song.default_key }}</span></td>
+                <td>{% if pref.can_lead %}<span class="badge badge-success">Yes</span>{% endif %}</td>
+                <td>
+                    {% if pref.confidence == 'high' %}<span class="badge badge-success">High</span>
+                    {% elif pref.confidence == 'medium' %}<span class="badge badge-warning">Medium</span>
+                    {% elif pref.confidence == 'low' %}<span class="badge badge-info">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No songs found matching the criteria.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

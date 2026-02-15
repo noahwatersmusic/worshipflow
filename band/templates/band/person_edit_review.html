@@ -1,0 +1,140 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Review Changes - {{ person.name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Review Changes for {{ person.name }}</h2>
+
+<p>Please review the changes below before confirming. Changes are highlighted in <span style="background: #fff3cd; padding: 2px 6px;">yellow</span>.</p>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" action="{% url 'band:person_edit_confirm' person.person_id %}">
+    {% csrf_token %}
+    <!-- Hidden fields to pass data to confirm view -->
+    <input type="hidden" name="name" value="{{ new_data.name }}">
+    <input type="hidden" name="role" value="{{ new_data.role }}">
+    <input type="hidden" name="frequency" value="{{ new_data.frequency }}">
+    <input type="hidden" name="primary_instrument" value="{{ new_data.primary_instrument }}">
+    <input type="hidden" name="secondary_instrument" value="{{ new_data.secondary_instrument }}">
+    <input type="hidden" name="lead_vocal" value="{{ new_data.lead_vocal }}">
+    <input type="hidden" name="harmony_vocal" value="{{ new_data.harmony_vocal }}">
+    <input type="hidden" name="preferred_keys" value="{{ new_data.preferred_keys }}">
+    <input type="hidden" name="style_strengths" value="{{ new_data.style_strengths }}">
+    <input type="hidden" name="availability" value="{{ new_data.availability }}">
+    <input type="hidden" name="notes" value="{{ new_data.notes }}">
+
+    <div class="card">
+        <h3>Changes Summary</h3>
+        {% if changes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Current Value</th>
+                        <th>New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in changes %}
+                    <tr style="background: #fff3cd;">
+                        <td><strong>{{ change.field }}</strong></td>
+                        <td>{{ change.old_value|default:"(empty)" }}</td>
+                        <td>{{ change.new_value|default:"(empty)" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: #7f8c8d;"><em>No changes detected.</em></p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Full Record Preview</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <h4 style="color: #7f8c8d; margin-bottom: 10px;">Basic Information</h4>
+                <p><strong>Person ID:</strong> {{ person.person_id }}</p>
+                <p {% if 'Name' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Name:</strong> {{ new_data.name }}</p>
+                <p {% if 'Role' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Role:</strong> {{ new_data.role_display }}</p>
+                {% if new_data.frequency %}
+                <p {% if 'Frequency' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Frequency:</strong> {{ new_data.frequency_display }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <h4 style="color: #7f8c8d; margin-bottom: 10px;">Instruments</h4>
+                {% if new_data.primary_instrument %}
+                <p {% if 'Primary Instrument' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Primary:</strong> {{ new_data.primary_instrument }}</p>
+                {% endif %}
+                {% if new_data.secondary_instrument %}
+                <p {% if 'Secondary Instrument' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Secondary:</strong> {{ new_data.secondary_instrument }}</p>
+                {% endif %}
+                {% if not new_data.primary_instrument and not new_data.secondary_instrument %}
+                <p style="color: #7f8c8d;"><em>No instruments specified</em></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Vocal Abilities</h4>
+            <p {% if 'Lead Vocal' in changed_fields %}style="background: #fff3cd; padding: 4px; display: inline-block;"{% endif %}>
+                <strong>Lead Vocal:</strong> {% if new_data.lead_vocal %}Yes{% else %}No{% endif %}
+            </p>
+            <p {% if 'Harmony Vocal' in changed_fields %}style="background: #fff3cd; padding: 4px; display: inline-block;"{% endif %}>
+                <strong>Harmony Vocal:</strong> {% if new_data.harmony_vocal %}Yes{% else %}No{% endif %}
+            </p>
+            {% if new_data.preferred_keys %}
+            <p {% if 'Preferred Keys' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}><strong>Preferred Keys:</strong> {{ new_data.preferred_keys }}</p>
+            {% endif %}
+        </div>
+
+        {% if new_data.style_strengths %}
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Style Strengths</h4>
+            <p {% if 'Style Strengths' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}>{{ new_data.style_strengths }}</p>
+        </div>
+        {% endif %}
+
+        {% if new_data.availability %}
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Availability</h4>
+            <p {% if 'Availability' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}>{{ new_data.availability }}</p>
+        </div>
+        {% endif %}
+
+        {% if new_data.notes %}
+        <div style="margin-top: 20px;">
+            <h4 style="color: #7f8c8d; margin-bottom: 10px;">Notes</h4>
+            <p {% if 'Notes' in changed_fields %}style="background: #fff3cd; padding: 4px;"{% endif %}>{{ new_data.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3>Confirm Changes</h3>
+        {% if changes %}
+            <p>Are you sure you want to save these {{ changes|length }} change(s)?</p>
+            <div style="margin-top: 15px;">
+                <button type="submit" style="background: #27ae60;">Confirm and Save</button>
+                <a href="{% url 'band:person_detail' person.person_id %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+            </div>
+        {% else %}
+            <p>No changes to save.</p>
+            <div style="margin-top: 15px;">
+                <a href="{% url 'band:person_detail' person.person_id %}" class="btn" style="background: #3498db;">Back to Profile</a>
+            </div>
+        {% endif %}
+    </div>
+</form>
+
+{% endblock %}

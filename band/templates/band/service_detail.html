@@ -1,0 +1,84 @@
+{% extends 'band/base.html' %}
+
+{% block title %}{{ service.service_name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>{{ service.service_name }}</h2>
+
+<div class="card">
+    <h3>Service Information</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <p><strong>Plan ID:</strong> <span class="badge badge-info">{{ service.plan_id }}</span></p>
+            <p><strong>Date:</strong> {{ service.service_date|date:"l, F d, Y" }}</p>
+        </div>
+        <div>
+            {% if service.band_notes %}
+            <p><strong>Band Notes:</strong> {{ service.band_notes }}</p>
+            {% endif %}
+            {% if service.service_notes %}
+            <p><strong>Service Notes:</strong> {{ service.service_notes }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Song Order</h3>
+
+    {% if service_songs %}
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 60px; text-align: center;">#</th>
+                <th>Song</th>
+                <th>Artist</th>
+                <th>Key Used</th>
+                <th>Lead</th>
+                {% if service_songs.0.length %}<th>Length</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for ss in service_songs %}
+            <tr>
+                <td style="text-align: center;">
+                    <span style="display: inline-block; width: 30px; height: 30px; line-height: 30px; text-align: center; background: #3498db; color: white; border-radius: 50%; font-weight: bold;">
+                        {{ ss.song_order }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{% url 'band:song_detail' ss.song.song_id %}"><strong>{{ ss.song.title }}</strong></a>
+                </td>
+                <td>{{ ss.song.artist|default:"-" }}</td>
+                <td>
+                    <span class="badge badge-info">{{ ss.key_used }}</span>
+                    {% if ss.key_used != ss.song.default_key %}
+                    <span style="color: #7f8c8d; font-size: 11px;">(orig: {{ ss.song.default_key }})</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ss.lead_person %}
+                    <a href="{% url 'band:person_detail' ss.lead_person.person_id %}">{{ ss.lead_person.name }}</a>
+                    {% else %}
+                    <span style="color: #7f8c8d;">-</span>
+                    {% endif %}
+                </td>
+                {% if service_songs.0.length %}
+                <td>{{ ss.length|default:"-" }} min</td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+        <strong>Total Songs:</strong> {{ service_songs|length }}
+    </div>
+    {% else %}
+    <p style="color: #7f8c8d;"><em>No songs assigned to this service.</em></p>
+    {% endif %}
+</div>
+
+<p><a href="{% url 'band:services_list' %}">&larr; Back to Services</a></p>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Import from PDF - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Import Services from PDF</h2>
+
+<div class="card">
+    <h3>Instructions</h3>
+    <ol style="line-height: 2;">
+        <li>Upload a PDF containing your service plan (e.g., from Planning Center)</li>
+        <li>The app will automatically extract service date, name, and songs</li>
+        <li>Review and edit the extracted information</li>
+        <li>Confirm to import the service into your database</li>
+    </ol>
+</div>
+
+<div class="card">
+    <h3>What Gets Extracted</h3>
+    <ul style="line-height: 2;">
+        <li><strong>Service Date</strong> - Detected from various date formats in the PDF</li>
+        <li><strong>Service Name</strong> - Identified from headings containing "service", "worship", etc.</li>
+        <li><strong>Songs</strong> - Title, artist, and key (when available)</li>
+    </ul>
+    <p style="margin-top: 15px; color: #7f8c8d;">
+        <em>Note: You'll be able to review and edit all extracted data before importing.</em>
+    </p>
+</div>
+
+<div class="card">
+    <h3>Upload PDF File</h3>
+
+    {% if messages %}
+        <div style="margin-bottom: 20px;">
+            {% for message in messages %}
+                <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="pdf_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select PDF File:</label>
+            <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
+        </div>
+        <button type="submit">Upload and Extract</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Tips for Best Results</h3>
+    <ul style="line-height: 2;">
+        <li>Use PDFs with selectable text (not scanned images)</li>
+        <li>PDFs exported from Planning Center work well</li>
+        <li>Make sure song titles and artists are clearly formatted</li>
+        <li>Keys in formats like "D", "G", "Am", "F#" will be detected</li>
+        <li>New songs are automatically added to your library with keys fetched from the internet</li>
+    </ul>
+</div>
+
+<p><a href="{% url 'band:import_csv' %}">&larr; Prefer CSV? Use the CSV import tool instead</a></p>
+{% endblock %}

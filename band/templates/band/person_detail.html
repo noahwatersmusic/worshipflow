@@ -1,0 +1,214 @@
+{% extends 'band/base.html' %}
+
+{% block title %}{{ person.name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>{{ person.name }}</h2>
+
+<!-- View Mode -->
+<div id="view-mode">
+    <div class="card">
+        <h3>Basic Information
+            {% if is_admin %}
+            <span style="float: right;">
+                <button type="button" onclick="enterEditMode()" style="background: #f39c12; padding: 5px 15px; font-size: 12px;">Edit</button>
+                <a href="{% url 'band:person_delete' person.person_id %}" class="btn" style="background: #e74c3c; padding: 5px 15px; font-size: 12px; margin-left: 5px;">Delete</a>
+            </span>
+            {% endif %}
+        </h3>
+        <p><strong>Person ID:</strong> {{ person.person_id }}</p>
+        <p><strong>Name:</strong> {{ person.name }}</p>
+        <p><strong>Role:</strong> {{ person.get_role_display }}</p>
+        {% if person.frequency %}<p><strong>Frequency:</strong> {{ person.get_frequency_display }}</p>{% endif %}
+    </div>
+
+    {% if person.primary_instrument or person.secondary_instrument %}
+    <div class="card">
+        <h3>Instruments</h3>
+        {% if person.primary_instrument %}<p><strong>Primary:</strong> {{ person.primary_instrument }}</p>{% endif %}
+        {% if person.secondary_instrument %}<p><strong>Secondary:</strong> {{ person.secondary_instrument }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if person.lead_vocal or person.harmony_vocal or person.preferred_keys %}
+    <div class="card">
+        <h3>Vocal Abilities</h3>
+        {% if person.lead_vocal %}<p><strong>Lead Vocal:</strong> Yes</p>{% endif %}
+        {% if person.harmony_vocal %}<p><strong>Harmony Vocal:</strong> Yes</p>{% endif %}
+        {% if person.preferred_keys %}<p><strong>Preferred Keys:</strong> {{ person.preferred_keys }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if person.style_strengths %}
+    <div class="card">
+        <h3>Style Strengths</h3>
+        <p>{{ person.style_strengths }}</p>
+    </div>
+    {% endif %}
+
+    {% if person.availability %}
+    <div class="card">
+        <h3>Availability</h3>
+        <p>{{ person.availability }}</p>
+    </div>
+    {% endif %}
+
+    {% if person.notes %}
+    <div class="card">
+        <h3>Notes</h3>
+        <p>{{ person.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Mode -->
+<div id="edit-mode" style="display: none;">
+    <form id="edit-form" method="post" action="{% url 'band:person_edit_review' person.person_id %}">
+        {% csrf_token %}
+
+        <div class="card">
+            <h3>Basic Information
+                <button type="button" onclick="cancelEdit()" style="float: right; background: #95a5a6; padding: 5px 15px; font-size: 12px;">Cancel</button>
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="filter-group">
+                    <label for="person_id">Person ID</label>
+                    <input type="text" id="person_id" name="person_id" value="{{ person.person_id }}" readonly style="background: #eee; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" name="name" value="{{ person.name }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="role">Role *</label>
+                    <select id="role" name="role" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                        {% for value, label in role_choices %}
+                        <option value="{{ value }}" {% if person.role == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="frequency">Frequency</label>
+                    <select id="frequency" name="frequency" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                        <option value="">-- Select --</option>
+                        {% for value, label in frequency_choices %}
+                        <option value="{{ value }}" {% if person.frequency == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Instruments</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="filter-group">
+                    <label for="primary_instrument">Primary Instrument</label>
+                    <input type="text" id="primary_instrument" name="primary_instrument" value="{{ person.primary_instrument|default:'' }}" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="secondary_instrument">Secondary Instrument</label>
+                    <input type="text" id="secondary_instrument" name="secondary_instrument" value="{{ person.secondary_instrument|default:'' }}" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Vocal Abilities</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="filter-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="lead_vocal" name="lead_vocal" {% if person.lead_vocal %}checked{% endif %}>
+                        Lead Vocal
+                    </label>
+                </div>
+                <div class="filter-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="harmony_vocal" name="harmony_vocal" {% if person.harmony_vocal %}checked{% endif %}>
+                        Harmony Vocal
+                    </label>
+                </div>
+                <div class="filter-group">
+                    <label for="preferred_keys">Preferred Keys</label>
+                    <input type="text" id="preferred_keys" name="preferred_keys" value="{{ person.preferred_keys|default:'' }}" placeholder="e.g., E, F, G, Bb" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Additional Information</h3>
+            <div style="margin-top: 15px;">
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="style_strengths">Style Strengths</label>
+                    <textarea id="style_strengths" name="style_strengths" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ person.style_strengths|default:'' }}</textarea>
+                </div>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="availability">Availability</label>
+                    <textarea id="availability" name="availability" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ person.availability|default:'' }}</textarea>
+                </div>
+                <div class="filter-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" rows="3" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ person.notes|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Save Changes</h3>
+            <p>Click "Review Changes" to see a summary of your changes before saving.</p>
+            <div style="margin-top: 15px;">
+                <button type="submit" style="background: #27ae60;">Review Changes</button>
+                <button type="button" onclick="cancelEdit()" style="background: #95a5a6; margin-left: 10px;">Cancel</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if song_preferences %}
+<div class="card">
+    <h3>Songs They Can Perform</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Song</th>
+                <th>Artist</th>
+                <th>Preferred Key</th>
+                <th>Can Lead</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pref in song_preferences %}
+            <tr>
+                <td><a href="{% url 'band:song_detail' pref.song.song_id %}">{{ pref.song.title }}</a></td>
+                <td>{{ pref.song.artist }}</td>
+                <td><strong>{{ pref.preferred_key }}</strong></td>
+                <td>{% if pref.can_lead %}<span class="badge badge-success">Yes</span>{% endif %}</td>
+                <td>
+                    {% if pref.confidence == 'high' %}<span class="badge badge-success">High</span>
+                    {% elif pref.confidence == 'medium' %}<span class="badge badge-warning">Medium</span>
+                    {% elif pref.confidence == 'low' %}<span class="badge badge-info">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<p><a href="{% url 'band:people_list' %}">&larr; Back to Band Members</a></p>
+
+<script>
+function enterEditMode() {
+    document.getElementById('view-mode').style.display = 'none';
+    document.getElementById('edit-mode').style.display = 'block';
+}
+
+function cancelEdit() {
+    document.getElementById('edit-mode').style.display = 'none';
+    document.getElementById('view-mode').style.display = 'block';
+}
+</script>
+
+{% endblock %}

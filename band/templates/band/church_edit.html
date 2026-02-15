@@ -1,0 +1,26 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Edit {{ church.name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Edit Church: {{ church.name }}</h2>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="name" style="display: block; font-weight: 600; margin-bottom: 5px;">Church Name</label>
+            <input type="text" id="name" name="name" value="{{ church.name }}" required style="width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: 600;">
+                <input type="checkbox" name="is_active" {% if church.is_active %}checked{% endif %}>
+                Active
+            </label>
+        </div>
+        <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 15px;">Slug: {{ church.slug }} (cannot be changed)</p>
+        <button type="submit" style="background: #27ae60;">Save Changes</button>
+        <a href="{% url 'band:church_list' %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

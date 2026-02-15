@@ -1,0 +1,48 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Delete {{ person.name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Delete Band Member</h2>
+
+<div class="card" style="border-left: 4px solid #e74c3c;">
+    <h3 style="color: #e74c3c;">Warning: This action cannot be undone</h3>
+    <p>You are about to delete the following band member:</p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+        <p><strong>Name:</strong> {{ person.name }}</p>
+        <p><strong>Person ID:</strong> {{ person.person_id }}</p>
+        <p><strong>Role:</strong> {{ person.get_role_display }}</p>
+        {% if person.primary_instrument %}
+        <p><strong>Primary Instrument:</strong> {{ person.primary_instrument }}</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if song_preferences_count > 0 or service_songs_count > 0 %}
+<div class="card" style="border-left: 4px solid #f39c12;">
+    <h3 style="color: #f39c12;">Related Data Will Be Affected</h3>
+    <p>Deleting this band member will also affect the following:</p>
+    <ul style="margin: 15px 0; padding-left: 20px;">
+        {% if song_preferences_count > 0 %}
+        <li><strong>{{ song_preferences_count }}</strong> song preference(s) will be deleted</li>
+        {% endif %}
+        {% if service_songs_count > 0 %}
+        <li><strong>{{ service_songs_count }}</strong> service song assignment(s) will have their lead person removed</li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Confirm Deletion</h3>
+    <p>Are you sure you want to permanently delete <strong>{{ person.name }}</strong>?</p>
+
+    <form method="post" action="{% url 'band:person_delete_confirm' person.person_id %}" style="margin-top: 20px;">
+        {% csrf_token %}
+        <button type="submit" style="background: #e74c3c;">Yes, Delete This Band Member</button>
+        <a href="{% url 'band:person_detail' person.person_id %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}
