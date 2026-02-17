@@ -1876,6 +1876,7 @@ def user_add(request):
 
             # Send welcome email with temp password
             church_name = profile.church.name if profile.church else 'WorshipFlow'
+            email_sent = False
             try:
                 send_mail(
                     subject=f'Welcome to WorshipFlow - {church_name}',
@@ -1891,11 +1892,14 @@ def user_add(request):
                     recipient_list=[email],
                     fail_silently=False,
                 )
-                messages.success(request, f'User "{email}" created. Login details emailed.')
-            except Exception as e:
-                messages.success(request, f'User "{email}" created.')
-                messages.warning(request, f'Could not send email: {e}')
-                messages.info(request, f'Temporary password: {temp_password}')
+                email_sent = True
+            except Exception:
+                pass
+
+            messages.success(request, f'User "{email}" created successfully.')
+            if email_sent:
+                messages.info(request, f'Login details emailed to {email}.')
+            messages.warning(request, f'Temporary password: {temp_password} — share this with the user.')
 
             return redirect('band:user_list')
 
