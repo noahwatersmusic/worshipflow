@@ -34,6 +34,10 @@ def initial_setup(request):
     if token != setup_token:
         return JsonResponse({'error': 'Invalid token'}, status=403)
 
+    # Run migrations first (can't run at build time on Vercel)
+    from django.core.management import call_command
+    call_command('migrate', '--no-input')
+
     if User.objects.filter(profile__app_role='superadmin').exists():
         return JsonResponse({'message': 'Superadmin already exists. Setup not needed.'})
 
