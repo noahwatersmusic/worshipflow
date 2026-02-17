@@ -44,19 +44,27 @@ def initial_setup(request):
         call_command('migrate', '--no-input', stdout=output)
         migrate_output = output.getvalue()
 
-        if User.objects.filter(profile__app_role='superadmin').exists():
-            # Reset password if provided
+        existing = User.objects.filter(profile__app_role='superadmin').first()
+        if existing:
             email = request.GET.get('email', '')
             password = request.GET.get('password', '')
             if email and password:
-                try:
-                    user = User.objects.get(email=email.lower())
-                    user.set_password(password)
-                    user.save()
-                    return JsonResponse({'message': 'Superadmin already exists. Password has been reset.', 'migrations': migrate_output})
-                except User.DoesNotExist:
-                    pass
-            return JsonResponse({'message': 'Superadmin already exists. Setup not needed.', 'migrations': migrate_output})
+                existing.username = email.lower()
+                existing.email = email.lower()
+                existing.set_password(password)
+                existing.save()
+                return JsonResponse({
+                    'message': 'Superadmin found. Email and password have been reset.',
+                    'old_username': existing.username,
+                    'new_email': email.lower(),
+                    'migrations': migrate_output,
+                })
+            return JsonResponse({
+                'message': 'Superadmin already exists.',
+                'username': existing.username,
+                'email': existing.email,
+                'migrations': migrate_output,
+            })
 
         from band.models import Church, UserProfile
 
