@@ -26,6 +26,8 @@ from decouple import config
 @csrf_exempt
 def initial_setup(request):
     """One-time setup endpoint to create superadmin. Protected by SETUP_TOKEN env var."""
+    import traceback
+
     setup_token = config('SETUP_TOKEN', default='')
     if not setup_token:
         return JsonResponse({'error': 'SETUP_TOKEN not configured'}, status=403)
@@ -34,40 +36,50 @@ def initial_setup(request):
     if token != setup_token:
         return JsonResponse({'error': 'Invalid token'}, status=403)
 
-    # Run migrations first (can't run at build time on Vercel)
-    from django.core.management import call_command
-    call_command('migrate', '--no-input')
+    try:
+        # Run migrations first (can't run at build time on Vercel)
+        from django.core.management import call_command
+        import io
+        output = io.StringIO()
+        call_command('migrate', '--no-input', stdout=output)
+        migrate_output = output.getvalue()
 
-    if User.objects.filter(profile__app_role='superadmin').exists():
-        return JsonResponse({'message': 'Superadmin already exists. Setup not needed.'})
+        if User.objects.filter(profile__app_role='superadmin').exists():
+            return JsonResponse({'message': 'Superadmin already exists. Setup not needed.', 'migrations': migrate_output})
 
-    from band.models import Church, UserProfile
+        from band.models import Church, UserProfile
 
-    church = Church.objects.create(name='Default Church', slug='default-church')
+        church = Church.objects.create(name='Default Church', slug='default-church')
 
-    email = request.GET.get('email', 'admin@worshipflow.app')
-    password = request.GET.get('password', 'changeme123')
+        email = request.GET.get('email', 'admin@worshipflow.app')
+        password = request.GET.get('password', 'changeme123')
 
-    user = User.objects.create_user(
-        username=email.lower(),
-        email=email.lower(),
-        password=password,
-        first_name='Admin',
-        last_name='User',
-    )
+        user = User.objects.create_user(
+            username=email.lower(),
+            email=email.lower(),
+            password=password,
+            first_name='Admin',
+            last_name='User',
+        )
 
-    profile = user.profile
-    profile.app_role = 'superadmin'
-    profile.church = church
-    profile.must_change_password = True
-    profile.save()
+        profile = user.profile
+        profile.app_role = 'superadmin'
+        profile.church = church
+        profile.must_change_password = True
+        profile.save()
 
-    return JsonResponse({
-        'message': 'Setup complete!',
-        'email': email,
-        'church': church.name,
-        'note': 'You will be prompted to change your password on first login. Delete the SETUP_TOKEN env var now.'
-    })
+        return JsonResponse({
+            'message': 'Setup complete!',
+            'email': email,
+            'church': church.name,
+            'migrations': migrate_output,
+            'note': 'You will be prompted to change your password on first login. Delete the SETUP_TOKEN env var now.'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+        }, status=500)
 
 
 urlpatterns = [
