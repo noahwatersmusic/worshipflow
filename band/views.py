@@ -1509,6 +1509,45 @@ def song_delete_confirm(request, song_id):
 
 
 @login_required
+@admin_required
+def service_delete(request, plan_id):
+    """Show delete confirmation for a service"""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+    service = get_object_or_404(Service, plan_id=plan_id, church=church)
+    song_count = ServiceSong.objects.filter(service=service).count()
+
+    return render(request, 'band/service_delete.html', {
+        'service': service,
+        'song_count': song_count,
+    })
+
+
+@login_required
+@admin_required
+def service_delete_confirm(request, plan_id):
+    """Confirm and delete a service"""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+    service = get_object_or_404(Service, plan_id=plan_id, church=church)
+
+    if request.method != 'POST':
+        return redirect('band:service_delete', plan_id=plan_id)
+
+    try:
+        service_name = service.service_name
+        service.delete()
+        messages.success(request, f'Successfully deleted "{service_name}".')
+    except Exception as e:
+        messages.error(request, f'Error deleting service: {str(e)}')
+        return redirect('band:service_detail', plan_id=plan_id)
+
+    return redirect('band:services_list')
+
+
+@login_required
 def services_list(request):
     """List all services with filtering options"""
     church = get_active_church(request)

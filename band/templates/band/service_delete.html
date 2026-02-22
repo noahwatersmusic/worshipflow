@@ -1,0 +1,41 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Delete {{ service.service_name }} - WorshipFlow{% endblock %}
+
+{% block content %}
+<h2>Delete Service</h2>
+
+<div class="card" style="border-left: 4px solid #e74c3c;">
+    <h3 style="color: #e74c3c;">Warning: This action cannot be undone</h3>
+    <p>You are about to delete the following service:</p>
+
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
+        <p><strong>Service Name:</strong> {{ service.service_name }}</p>
+        <p><strong>Plan ID:</strong> {{ service.plan_id }}</p>
+        <p><strong>Date:</strong> {{ service.service_date|date:"l, F d, Y" }}</p>
+    </div>
+</div>
+
+{% if song_count > 0 %}
+<div class="card" style="border-left: 4px solid #f39c12;">
+    <h3 style="color: #f39c12;">Related Data Will Be Deleted</h3>
+    <p>Deleting this service will also delete the following:</p>
+    <ul style="margin: 15px 0; padding-left: 20px;">
+        <li><strong>{{ song_count }}</strong> song assignment(s) from this service</li>
+    </ul>
+    <p style="color: #7f8c8d;"><em>Note: The songs themselves will remain in your library — only their assignment to this service will be removed.</em></p>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Confirm Deletion</h3>
+    <p>Are you sure you want to permanently delete <strong>"{{ service.service_name }}"</strong>?</p>
+
+    <form method="post" action="{% url 'band:service_delete_confirm' service.plan_id %}" style="margin-top: 20px;">
+        {% csrf_token %}
+        <button type="submit" style="background: #e74c3c;">Yes, Delete This Service</button>
+        <a href="{% url 'band:service_detail' service.plan_id %}" class="btn" style="background: #95a5a6; margin-left: 10px;">Cancel</a>
+    </form>
+</div>
+
+{% endblock %}

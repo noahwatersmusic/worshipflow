@@ -6,7 +6,13 @@
 <h2>{{ service.service_name }}</h2>
 
 <div class="card">
-    <h3>Service Information</h3>
+    <h3>Service Information
+        {% if is_admin %}
+        <span style="float: right;">
+            <a href="{% url 'band:service_delete' service.plan_id %}" class="btn" style="background: #e74c3c; padding: 5px 15px; font-size: 12px;">Delete</a>
+        </span>
+        {% endif %}
+    </h3>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <div>
             <p><strong>Plan ID:</strong> <span class="badge badge-info">{{ service.plan_id }}</span></p>
