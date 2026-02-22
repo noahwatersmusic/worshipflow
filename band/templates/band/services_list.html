@@ -9,41 +9,95 @@
     {% endif %}
 </h2>
 
-<div class="card">
-    <h3>Filter Services</h3>
-    <form method="get" action="">
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
-            <div class="filter-group">
-                <label for="search">Search</label>
-                <input type="text" id="search" name="search" value="{{ request.GET.search }}" placeholder="Service name or ID...">
-            </div>
-            <div class="filter-group">
-                <label for="date_from">From Date</label>
-                <input type="date" id="date_from" name="date_from" value="{{ request.GET.date_from }}">
-            </div>
-            <div class="filter-group">
-                <label for="date_to">To Date</label>
-                <input type="date" id="date_to" name="date_to" value="{{ request.GET.date_to }}">
-            </div>
-            <div>
-                <button type="submit">Filter</button>
-                {% if request.GET %}
-                <a href="{% url 'band:services_list' %}" style="margin-left: 10px; color: #7f8c8d;">Clear</a>
-                {% endif %}
-            </div>
-        </div>
-    </form>
+{% if date_active or selected_names %}
+<div style="background: #eaf4fb; border: 1px solid #aed6f1; border-radius: 4px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <span style="font-size: 13px; color: #2980b9; font-weight: 600;">Active filters:</span>
+    {% if date_exact %}
+    <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">Date: {{ date_exact }}</span>
+    {% elif date_from or date_to %}
+    <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+        Date: {% if date_from %}{{ date_from }}{% else %}…{% endif %} – {% if date_to %}{{ date_to }}{% else %}…{% endif %}
+    </span>
+    {% endif %}
+    {% for name in selected_names %}
+    <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">{{ name }}</span>
+    {% endfor %}
+    <a href="{% url 'band:services_list' %}{% if sort != 'date_desc' %}?sort={{ sort }}{% endif %}" style="margin-left: auto; font-size: 12px; color: #e74c3c;">✕ Clear filters</a>
 </div>
+{% endif %}
 
 <div class="card">
     <h3>All Services ({{ services|length }})</h3>
 
     {% if services %}
+    <div style="overflow: visible;">
     <table>
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Service Name</th>
+                <!-- Date column header with filter dropdown -->
+                <th style="position: relative; white-space: nowrap;">
+                    <div onclick="toggleFilter('date-filter', event)" style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        {% if sort == 'date_asc' %}<span style="color: #3498db; font-size: 12px;">↑</span>
+                        {% else %}<span style="color: #3498db; font-size: 12px;">↓</span>{% endif %}
+                        Date
+                        <span style="color: {% if date_active %}#e67e22{% else %}#bdc3c7{% endif %}; font-size: 10px;">▼</span>
+                    </div>
+                    <div id="date-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 270px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
+                        <div style="margin-bottom: 12px;">
+                            <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Sort</strong>
+                            <div style="display: flex; gap: 8px; margin-top: 7px;">
+                                <button type="button" onclick="applySort('date_desc')" style="flex: 1; padding: 6px; font-size: 12px; background: {% if sort == 'date_desc' %}#3498db{% else %}#ecf0f1{% endif %}; color: {% if sort == 'date_desc' %}white{% else %}#333{% endif %}; border: none; border-radius: 4px; cursor: pointer;">↓ Newest First</button>
+                                <button type="button" onclick="applySort('date_asc')" style="flex: 1; padding: 6px; font-size: 12px; background: {% if sort == 'date_asc' %}#3498db{% else %}#ecf0f1{% endif %}; color: {% if sort == 'date_asc' %}white{% else %}#333{% endif %}; border: none; border-radius: 4px; cursor: pointer;">↑ Oldest First</button>
+                            </div>
+                        </div>
+                        <hr style="border: none; border-top: 1px solid #f0f0f0; margin: 12px 0;">
+                        <div style="margin-bottom: 10px;">
+                            <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Specific Date</strong>
+                            <input type="date" id="input-date-exact" value="{{ date_exact }}" style="display: block; width: 100%; margin-top: 7px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Date Range</strong>
+                            <div style="display: flex; align-items: center; gap: 6px; margin-top: 7px;">
+                                <input type="date" id="input-date-from" value="{{ date_from }}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 0;">
+                                <span style="color: #7f8c8d; flex-shrink: 0;">–</span>
+                                <input type="date" id="input-date-to" value="{{ date_to }}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; min-width: 0;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" onclick="applyDateFilter()" style="flex: 1; padding: 7px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">Apply</button>
+                            <button type="button" onclick="clearDateFilter()" style="padding: 7px 12px; background: #ecf0f1; color: #555; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Clear</button>
+                        </div>
+                    </div>
+                </th>
+
+                <!-- Service Name column header with checkbox filter -->
+                <th style="position: relative; white-space: nowrap;">
+                    <div onclick="toggleFilter('name-filter', event)" style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        Service Name
+                        <span style="color: {% if selected_names %}#e67e22{% else %}#bdc3c7{% endif %}; font-size: 10px;">▼</span>
+                        {% if selected_names %}<span style="background: #e67e22; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">{{ selected_names|length }}</span>{% endif %}
+                    </div>
+                    <div id="name-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 230px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
+                        <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Filter by Name</strong>
+                        {% if all_service_names %}
+                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #f0f0f0; border-radius: 4px; padding: 6px 8px;">
+                            {% for name in all_service_names %}
+                            <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; font-weight: normal; border-bottom: 1px solid #f8f9fa;">
+                                <input type="checkbox" class="name-checkbox" value="{{ name }}" {% if name in selected_names %}checked{% endif %} style="cursor: pointer; accent-color: #8e44ad;">
+                                {{ name }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 10px;">No service names available.</p>
+                        {% endif %}
+                        <div style="display: flex; gap: 8px; border-top: 1px solid #f0f0f0; padding-top: 10px;">
+                            <button type="button" onclick="applyNameFilter()" style="flex: 1; padding: 7px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">Apply</button>
+                            <button type="button" onclick="clearNameFilter()" style="padding: 7px 12px; background: #ecf0f1; color: #555; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Clear</button>
+                        </div>
+                    </div>
+                </th>
+
                 <th>Plan ID</th>
                 <th>Songs</th>
                 <th>Length</th>
@@ -65,9 +119,91 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
-    <p style="color: #7f8c8d;"><em>No services found. Import services using the Import page.</em></p>
+    <p style="color: #7f8c8d;"><em>No services found{% if date_active or selected_names %} matching the current filters{% endif %}.</em></p>
     {% endif %}
 </div>
+
+<script>
+const currentSort = "{{ sort }}";
+const currentDateExact = "{{ date_exact }}";
+const currentDateFrom = "{{ date_from }}";
+const currentDateTo = "{{ date_to }}";
+const currentNames = [{% for n in selected_names %}"{{ n }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+
+function getParams() {
+    return new URLSearchParams(window.location.search);
+}
+
+function navigate(params) {
+    // Always preserve sort if it's been set
+    window.location.href = '?' + params.toString();
+}
+
+function toggleFilter(id, event) {
+    event.stopPropagation();
+    document.querySelectorAll('.filter-dropdown').forEach(function(d) {
+        if (d.id !== id) d.style.display = 'none';
+    });
+    var el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close all dropdowns when clicking outside
+document.addEventListener('click', function() {
+    document.querySelectorAll('.filter-dropdown').forEach(function(d) {
+        d.style.display = 'none';
+    });
+});
+
+function applySort(direction) {
+    var params = getParams();
+    params.set('sort', direction);
+    navigate(params);
+}
+
+function applyDateFilter() {
+    var params = getParams();
+    var exact = document.getElementById('input-date-exact').value;
+    var from = document.getElementById('input-date-from').value;
+    var to = document.getElementById('input-date-to').value;
+
+    params.delete('date');
+    params.delete('date_from');
+    params.delete('date_to');
+
+    if (exact) {
+        params.set('date', exact);
+    } else {
+        if (from) params.set('date_from', from);
+        if (to) params.set('date_to', to);
+    }
+    navigate(params);
+}
+
+function clearDateFilter() {
+    var params = getParams();
+    params.delete('date');
+    params.delete('date_from');
+    params.delete('date_to');
+    navigate(params);
+}
+
+function applyNameFilter() {
+    var params = getParams();
+    params.delete('names');
+    document.querySelectorAll('#name-filter .name-checkbox:checked').forEach(function(cb) {
+        params.append('names', cb.value);
+    });
+    navigate(params);
+}
+
+function clearNameFilter() {
+    var params = getParams();
+    params.delete('names');
+    navigate(params);
+}
+</script>
 
 {% endblock %}

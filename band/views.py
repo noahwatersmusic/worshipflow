@@ -1608,35 +1608,57 @@ def service_delete_confirm(request, plan_id):
 
 @login_required
 def services_list(request):
-    """List all services with filtering options"""
+    """List all services with column-based filtering"""
     church = get_active_church(request)
     if not church:
         return redirect('band:home')
+
+    # All unique service names for the name filter dropdown
+    all_service_names = list(
+        Service.objects.filter(church=church)
+        .values_list('service_name', flat=True)
+        .distinct()
+        .order_by('service_name')
+    )
+
     services = Service.objects.filter(church=church).prefetch_related('songs__song', 'songs__lead_person')
 
-    # Filter by date range
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    if date_from:
-        try:
-            services = services.filter(service_date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
-        except ValueError:
-            pass
-    if date_to:
-        try:
-            services = services.filter(service_date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
-        except ValueError:
-            pass
+    # Sort (default: newest first)
+    sort = request.GET.get('sort', 'date_desc')
+    if sort == 'date_asc':
+        services = services.order_by('service_date', 'service_name')
+    else:
+        services = services.order_by('-service_date', 'service_name')
 
-    # Search by name
-    search = request.GET.get('search')
-    if search:
-        services = services.filter(Q(service_name__icontains=search) | Q(plan_id__icontains=search))
+    # Date filter: specific date takes priority over range
+    date_exact = request.GET.get('date', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
 
-    # Add song count annotation
+    if date_exact:
+        try:
+            services = services.filter(service_date=datetime.strptime(date_exact, '%Y-%m-%d').date())
+        except ValueError:
+            date_exact = ''
+    else:
+        if date_from:
+            try:
+                services = services.filter(service_date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+            except ValueError:
+                date_from = ''
+        if date_to:
+            try:
+                services = services.filter(service_date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+            except ValueError:
+                date_to = ''
+
+    # Name filter: multi-select checkboxes
+    selected_names = request.GET.getlist('names')
+    if selected_names:
+        services = services.filter(service_name__in=selected_names)
+
+    # Annotate and compute lengths
     services = services.annotate(song_count=Count('songs'))
-
-    # Compute total length for each service from prefetched song data
     services = list(services)
     for service in services:
         total_sec = sum(
@@ -1647,6 +1669,13 @@ def services_list(request):
 
     context = {
         'services': services,
+        'all_service_names': all_service_names,
+        'sort': sort,
+        'selected_names': selected_names,
+        'date_exact': date_exact,
+        'date_from': date_from,
+        'date_to': date_to,
+        'date_active': bool(date_exact or date_from or date_to),
     }
     return render(request, 'band/services_list.html', context)
 
