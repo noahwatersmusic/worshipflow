@@ -2103,9 +2103,10 @@ def user_add(request):
                     subject=f'Welcome to WorshipFlow - {church_name}',
                     message=(
                         f'Hi {first_name or email},\n\n'
-                        f'An account has been created for you on WorshipFlow.\n\n'
+                        f'An account has been created for you on WorshipFlow for {church_name}.\n\n'
                         f'Email (login): {email}\n'
                         f'Temporary password: {temp_password}\n\n'
+                        f'Sign in here: https://worshipflow-mu.vercel.app/login/\n\n'
                         f'You will be asked to set a new password when you first log in.\n\n'
                         f'- {church_name}'
                     ),
