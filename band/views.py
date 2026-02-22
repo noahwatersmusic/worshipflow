@@ -2038,7 +2038,7 @@ def user_list(request):
         # Admins only see users in their own church
         profiles = profiles.filter(church=caller_profile.church)
 
-    context = {'profiles': profiles}
+    context = {'profiles': profiles, 'is_superadmin': caller_profile.is_superadmin}
     return render(request, 'band/user_list.html', context)
 
 
@@ -2211,6 +2211,73 @@ def user_edit(request, user_id):
         'is_superadmin': caller_profile.is_superadmin,
     }
     return render(request, 'band/user_edit.html', context)
+
+
+@login_required
+@admin_required
+def user_delete(request, user_id):
+    """Show delete confirmation for a user."""
+    from django.contrib.auth.models import User
+
+    try:
+        caller_profile = request.user.profile
+    except Exception:
+        return redirect('band:home')
+
+    target_user = get_object_or_404(User, id=user_id)
+    profile, _ = UserProfile.objects.get_or_create(user=target_user)
+
+    # Can't delete yourself
+    if target_user == request.user:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect('band:user_list')
+
+    # Admins can only delete 'user' role accounts in their church
+    if not caller_profile.is_superadmin:
+        if profile.church != caller_profile.church:
+            messages.error(request, "You don't have permission to delete this user.")
+            return redirect('band:user_list')
+        if profile.app_role != 'user':
+            messages.error(request, "Admins can only delete regular user accounts.")
+            return redirect('band:user_list')
+
+    return render(request, 'band/user_delete.html', {
+        'target_user': target_user,
+        'profile': profile,
+    })
+
+
+@login_required
+@admin_required
+def user_delete_confirm(request, user_id):
+    """Perform the actual user deletion."""
+    from django.contrib.auth.models import User
+
+    try:
+        caller_profile = request.user.profile
+    except Exception:
+        return redirect('band:home')
+
+    target_user = get_object_or_404(User, id=user_id)
+    profile, _ = UserProfile.objects.get_or_create(user=target_user)
+
+    if request.method != 'POST':
+        return redirect('band:user_delete', user_id=user_id)
+
+    # Re-check permissions
+    if target_user == request.user:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect('band:user_list')
+
+    if not caller_profile.is_superadmin:
+        if profile.church != caller_profile.church or profile.app_role != 'user':
+            messages.error(request, "You don't have permission to delete this user.")
+            return redirect('band:user_list')
+
+    email = target_user.email or target_user.username
+    target_user.delete()
+    messages.success(request, f'User "{email}" has been deleted.')
+    return redirect('band:user_list')
 
 
 @login_required

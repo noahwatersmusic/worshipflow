@@ -39,6 +39,8 @@ urlpatterns = [
     path('users/', views.user_list, name='user_list'),
     path('users/add/', views.user_add, name='user_add'),
     path('users/<int:user_id>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:user_id>/delete/', views.user_delete, name='user_delete'),
+    path('users/<int:user_id>/delete/confirm/', views.user_delete_confirm, name='user_delete_confirm'),
     # SuperAdmin: Church switcher
     path('switch-church/', views.switch_church, name='switch_church'),
     # Password change (first login)

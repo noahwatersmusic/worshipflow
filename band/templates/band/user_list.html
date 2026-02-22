@@ -34,6 +34,11 @@
                 </td>
                 <td>
                     <a href="{% url 'band:user_edit' profile.user.id %}" class="btn" style="padding: 4px 12px; font-size: 12px; background: #f39c12;">Edit</a>
+                    {% if profile.user != request.user %}
+                        {% if is_superadmin or profile.app_role == 'user' %}
+                        <a href="{% url 'band:user_delete' profile.user.id %}" class="btn" style="padding: 4px 12px; font-size: 12px; background: #e74c3c; margin-left: 5px;">Delete</a>
+                        {% endif %}
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
