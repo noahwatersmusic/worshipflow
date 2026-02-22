@@ -491,180 +491,185 @@ def import_services(request):
     if request.method == 'POST':
         import_type = request.POST.get('import_type', '')
 
-        if import_type == 'csv' and request.FILES.get('csv_file'):
+        if import_type == 'csv' and request.FILES.getlist('csv_file'):
             return handle_csv_import(request)
-        elif import_type == 'pdf' and request.FILES.get('pdf_file'):
+        elif import_type == 'pdf' and request.FILES.getlist('pdf_file'):
             return handle_pdf_import(request)
 
     return render(request, 'band/import.html')
 
 
 def handle_csv_import(request):
-    """Handle CSV file import"""
+    """Handle CSV file import (supports multiple files)"""
     church = get_active_church(request)
     if not church:
         messages.error(request, 'Please select a church first.')
         return redirect('band:home')
 
-    csv_file = request.FILES['csv_file']
+    csv_files = request.FILES.getlist('csv_file')
+    all_errors = []
+    total_imported = 0
+    multi = len(csv_files) > 1
 
-    # Check if file is CSV
-    if not csv_file.name.endswith('.csv'):
-        messages.error(request, 'Please upload a CSV file.')
-        return redirect('band:import_services')
+    for csv_file in csv_files:
+        file_prefix = f'{csv_file.name}: ' if multi else ''
 
-    try:
-        # Read and decode CSV file
-        file_data = csv_file.read().decode('utf-8')
-        csv_reader = csv.DictReader(io.StringIO(file_data))
+        if not csv_file.name.endswith('.csv'):
+            all_errors.append(f'{csv_file.name}: Not a CSV file.')
+            continue
 
-        # Group rows by service (Service Date + Service Name)
-        services_data = {}
-        errors = []
-        row_num = 2
+        try:
+            # Read and decode CSV file
+            file_data = csv_file.read().decode('utf-8')
+            csv_reader = csv.DictReader(io.StringIO(file_data))
 
-        for row in csv_reader:
-            try:
-                # Parse service date
-                service_date = datetime.strptime(row['Service Date'], '%Y-%m-%d').date()
-                service_name = row['Service Name']
+            # Group rows by service (Service Date + Service Name)
+            services_data = {}
+            errors = []
+            row_num = 2
 
-                # Create unique key for this service
-                service_key = (service_date, service_name)
-
-                # Initialize service data if first time seeing this service
-                if service_key not in services_data:
-                    services_data[service_key] = {
-                        'service_date': service_date,
-                        'service_name': service_name,
-                        'band_notes': row.get('Band Notes', ''),
-                        'service_notes': row.get('Service Notes', ''),
-                        'songs': []
-                    }
-
-                # Add song to this service if specified
-                if row.get('Song ID') and row.get('Song Order'):
-                    song_data = {
-                        'song_id': row['Song ID'],
-                        'song_title': row.get('Song Title', ''),
-                        'song_artist': row.get('Song Artist', ''),
-                        'song_default_key': row.get('Song Default Key', ''),
-                        'song_order': row['Song Order'],
-                        'key_used': row.get('Key Used', ''),
-                        'length': row.get('Length', ''),
-                        'lead_person_id': row.get('Lead Person ID', ''),
-                        'row_num': row_num
-                    }
-                    services_data[service_key]['songs'].append(song_data)
-
-            except KeyError as e:
-                errors.append(f"Row {row_num}: Missing required field - {str(e)}")
-            except ValueError as e:
-                errors.append(f"Row {row_num}: Invalid date format - {str(e)}")
-            except Exception as e:
-                errors.append(f"Row {row_num}: Error - {str(e)}")
-
-            row_num += 1
-
-        # Generate Plan IDs and create services
-        imported_count = 0
-
-        # Get the next available Plan ID number (scoped to church)
-        last_service = Service.objects.filter(church=church).order_by('-plan_id').first()
-        if last_service and last_service.plan_id.startswith('SV'):
-            try:
-                next_num = int(last_service.plan_id[2:]) + 1
-            except:
-                next_num = 1
-        else:
-            next_num = 1
-
-        # Create each service
-        for service_key, service_info in services_data.items():
-            # Generate Plan ID
-            plan_id = f"SV{next_num:03d}"
-            next_num += 1
-
-            # Create service
-            service = Service.objects.create(
-                plan_id=plan_id,
-                service_date=service_info['service_date'],
-                service_name=service_info['service_name'],
-                band_notes=service_info['band_notes'],
-                service_notes=service_info['service_notes'],
-                church=church,
-            )
-
-            # Add songs to service
-            for song_data in service_info['songs']:
+            for row in csv_reader:
                 try:
-                    # Try to get existing song
+                    # Parse service date
+                    service_date = datetime.strptime(row['Service Date'], '%Y-%m-%d').date()
+                    service_name = row['Service Name']
+
+                    # Create unique key for this service
+                    service_key = (service_date, service_name)
+
+                    # Initialize service data if first time seeing this service
+                    if service_key not in services_data:
+                        services_data[service_key] = {
+                            'service_date': service_date,
+                            'service_name': service_name,
+                            'band_notes': row.get('Band Notes', ''),
+                            'service_notes': row.get('Service Notes', ''),
+                            'songs': []
+                        }
+
+                    # Add song to this service if specified
+                    if row.get('Song ID') and row.get('Song Order'):
+                        song_data = {
+                            'song_id': row['Song ID'],
+                            'song_title': row.get('Song Title', ''),
+                            'song_artist': row.get('Song Artist', ''),
+                            'song_default_key': row.get('Song Default Key', ''),
+                            'song_order': row['Song Order'],
+                            'key_used': row.get('Key Used', ''),
+                            'length': row.get('Length', ''),
+                            'lead_person_id': row.get('Lead Person ID', ''),
+                            'row_num': row_num
+                        }
+                        services_data[service_key]['songs'].append(song_data)
+
+                except KeyError as e:
+                    errors.append(f"{file_prefix}Row {row_num}: Missing required field - {str(e)}")
+                except ValueError as e:
+                    errors.append(f"{file_prefix}Row {row_num}: Invalid date format - {str(e)}")
+                except Exception as e:
+                    errors.append(f"{file_prefix}Row {row_num}: Error - {str(e)}")
+
+                row_num += 1
+
+            # Generate Plan IDs and create services
+            imported_count = 0
+
+            # Get the next available Plan ID number (scoped to church)
+            last_service = Service.objects.filter(church=church).order_by('-plan_id').first()
+            if last_service and last_service.plan_id.startswith('SV'):
+                try:
+                    next_num = int(last_service.plan_id[2:]) + 1
+                except:
+                    next_num = 1
+            else:
+                next_num = 1
+
+            # Create each service
+            for service_key, service_info in services_data.items():
+                # Generate Plan ID
+                plan_id = f"SV{next_num:03d}"
+                next_num += 1
+
+                # Create service
+                service = Service.objects.create(
+                    plan_id=plan_id,
+                    service_date=service_info['service_date'],
+                    service_name=service_info['service_name'],
+                    band_notes=service_info['band_notes'],
+                    service_notes=service_info['service_notes'],
+                    church=church,
+                )
+
+                # Add songs to service
+                for song_data in service_info['songs']:
                     try:
-                        song = Song.objects.get(song_id=song_data['song_id'], church=church)
-                    except Song.DoesNotExist:
-                        # Create new song if it doesn't exist
-                        if song_data['song_title'] and song_data['song_default_key']:
-                            # Try to fetch song info from PraiseCharts
-                            song_info = fetch_song_info_from_internet(
-                                song_data['song_title'],
-                                song_data['song_artist']
-                            )
-
-                            # Use fetched key if found, otherwise use CSV-provided key
-                            final_key = song_info['key'] if song_info['key'] else song_data['song_default_key']
-
-                            song = Song.objects.create(
-                                song_id=song_data['song_id'],
-                                title=song_data['song_title'],
-                                artist=song_data['song_artist'],
-                                default_key=final_key,
-                                tempo=song_info['tempo'] or '',
-                                bpm=song_info['bpm'],
-                                church=church,
-                            )
-
-                            # Log which key was used
-                            if song_info['key']:
-                                messages.info(request, f"Created '{song_data['song_title']}' with original key {final_key} (found online)")
-                            else:
-                                messages.info(request, f"Created '{song_data['song_title']}' with key {final_key} (from CSV)")
-                        else:
-                            errors.append(f"Row {song_data['row_num']}: Song {song_data['song_id']} not found. To create it, provide Song Title and Song Default Key.")
-                            continue
-
-                    lead_person = None
-                    if song_data['lead_person_id']:
+                        # Try to get existing song
                         try:
-                            lead_person = Person.objects.get(person_id=song_data['lead_person_id'], church=church)
-                        except Person.DoesNotExist:
-                            # Silently skip if lead person not found - just populate songs and services
-                            pass
+                            song = Song.objects.get(song_id=song_data['song_id'], church=church)
+                        except Song.DoesNotExist:
+                            # Create new song if it doesn't exist
+                            if song_data['song_title'] and song_data['song_default_key']:
+                                # Try to fetch song info from PraiseCharts
+                                song_info = fetch_song_info_from_internet(
+                                    song_data['song_title'],
+                                    song_data['song_artist']
+                                )
 
-                    ServiceSong.objects.create(
-                        service=service,
-                        song=song,
-                        song_order=int(song_data['song_order']),
-                        key_used=song_data['key_used'],
-                        length=int(song_data['length']) if song_data['length'] else None,
-                        lead_person=lead_person
-                    )
+                                # Use fetched key if found, otherwise use CSV-provided key
+                                final_key = song_info['key'] if song_info['key'] else song_data['song_default_key']
 
-                    # Update song's last_used and times_used
-                    if song.last_used is None or service_info['service_date'] > song.last_used:
-                        song.last_used = service_info['service_date']
-                    song.times_used += 1
-                    song.save()
+                                song = Song.objects.create(
+                                    song_id=song_data['song_id'],
+                                    title=song_data['song_title'],
+                                    artist=song_data['song_artist'],
+                                    default_key=final_key,
+                                    tempo=song_info['tempo'] or '',
+                                    bpm=song_info['bpm'],
+                                    church=church,
+                                )
 
-                    # If there's a lead person, add/update their song preference
-                    if lead_person:
-                        pref, created = PersonSongPreference.objects.get_or_create(
-                            person=lead_person,
+                                # Log which key was used
+                                if song_info['key']:
+                                    messages.info(request, f"Created '{song_data['song_title']}' with original key {final_key} (found online)")
+                                else:
+                                    messages.info(request, f"Created '{song_data['song_title']}' with key {final_key} (from CSV)")
+                            else:
+                                errors.append(f"{file_prefix}Row {song_data['row_num']}: Song {song_data['song_id']} not found. To create it, provide Song Title and Song Default Key.")
+                                continue
+
+                        lead_person = None
+                        if song_data['lead_person_id']:
+                            try:
+                                lead_person = Person.objects.get(person_id=song_data['lead_person_id'], church=church)
+                            except Person.DoesNotExist:
+                                # Silently skip if lead person not found - just populate songs and services
+                                pass
+
+                        ServiceSong.objects.create(
+                            service=service,
                             song=song,
-                            defaults={
-                                'entry_id': f"E{PersonSongPreference.objects.count() + 1:03d}",
-                                'preferred_key': song_data['key_used'] if song_data['key_used'] else song.default_key,
-                                'can_lead': True,
-                                'confidence': 'high',
+                            song_order=int(song_data['song_order']),
+                            key_used=song_data['key_used'],
+                            length=int(song_data['length']) if song_data['length'] else None,
+                            lead_person=lead_person
+                        )
+
+                        # Update song's last_used and times_used
+                        if song.last_used is None or service_info['service_date'] > song.last_used:
+                            song.last_used = service_info['service_date']
+                        song.times_used += 1
+                        song.save()
+
+                        # If there's a lead person, add/update their song preference
+                        if lead_person:
+                            pref, created = PersonSongPreference.objects.get_or_create(
+                                person=lead_person,
+                                song=song,
+                                defaults={
+                                    'entry_id': f"E{PersonSongPreference.objects.count() + 1:03d}",
+                                    'preferred_key': song_data['key_used'] if song_data['key_used'] else song.default_key,
+                                    'can_lead': True,
+                                    'confidence': 'high',
                             }
                         )
                         if not created and not pref.can_lead:
@@ -672,22 +677,29 @@ def handle_csv_import(request):
                             pref.can_lead = True
                             pref.save()
 
-                except ValueError as e:
-                    errors.append(f"Row {song_data['row_num']}: Invalid number format - {str(e)}")
+                    except ValueError as e:
+                        errors.append(f"{file_prefix}Row {song_data['row_num']}: Invalid number format - {str(e)}")
 
-            imported_count += 1
+                imported_count += 1
 
-        # Display results
-        if imported_count > 0:
-            messages.success(request, f'Successfully imported {imported_count} service(s).')
-        if errors:
-            for error in errors[:10]:  # Show first 10 errors
-                messages.warning(request, error)
-            if len(errors) > 10:
-                messages.warning(request, f'...and {len(errors) - 10} more errors')
+            total_imported += imported_count
+            all_errors.extend(errors)
 
-    except Exception as e:
-        messages.error(request, f'Error processing CSV file: {str(e)}')
+            if multi and imported_count > 0:
+                messages.success(request, f'{csv_file.name}: Imported {imported_count} service(s).')
+
+        except Exception as e:
+            all_errors.append(f'{csv_file.name}: Error processing file: {str(e)}')
+
+    # Display aggregate results
+    if total_imported > 0 and not multi:
+        messages.success(request, f'Successfully imported {total_imported} service(s).')
+    elif total_imported > 0:
+        messages.success(request, f'Total: {total_imported} service(s) imported from {len(csv_files)} file(s).')
+    for error in all_errors[:10]:
+        messages.warning(request, error)
+    if len(all_errors) > 10:
+        messages.warning(request, f'...and {len(all_errors) - 10} more errors')
 
     return redirect('band:import_services')
 
@@ -1047,264 +1059,248 @@ def parse_pdf_for_service_data(pdf_text):
 
 
 def handle_pdf_import(request):
-    """Handle PDF file upload and parsing"""
+    """Handle PDF file upload and parsing (supports multiple files)"""
     church = get_active_church(request)
     if not church:
         messages.error(request, 'Please select a church first.')
         return redirect('band:home')
 
-    pdf_file = request.FILES['pdf_file']
+    pdf_files = request.FILES.getlist('pdf_file')
+    people = Person.objects.filter(church=church).filter(
+        Q(lead_vocal=True) | Q(harmony_vocal=True)
+    ).order_by('name')
 
-    # Check if file is PDF
-    if not pdf_file.name.lower().endswith('.pdf'):
-        messages.error(request, 'Please upload a PDF file.')
+    all_extracted = []
+
+    for pdf_file in pdf_files:
+        if not pdf_file.name.lower().endswith('.pdf'):
+            messages.error(request, f'{pdf_file.name}: Not a PDF file.')
+            continue
+
+        try:
+            # Extract data from PDF - try tables first, then text
+            pdf_text = ""
+            all_tables = []
+
+            with pdfplumber.open(pdf_file) as pdf:
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    if tables:
+                        all_tables.extend(tables)
+                    page_text = page.extract_text()
+                    if page_text:
+                        pdf_text += page_text + "\n"
+
+            extracted_data = None
+
+            # Try table extraction first if we found tables
+            if all_tables:
+                extracted_data = parse_pdf_table_data(all_tables)
+                extracted_data['raw_text'] = pdf_text
+                # Only use table data if songs were found
+                if not extracted_data['songs']:
+                    extracted_data = None
+
+            # Fall back to text parsing
+            if extracted_data is None:
+                if not pdf_text.strip():
+                    messages.error(request, f'{pdf_file.name}: Could not extract text. The PDF may be image-based or empty.')
+                    continue
+                extracted_data = parse_pdf_for_service_data(pdf_text)
+
+            # Match lead names to people in database
+            for song in extracted_data['songs']:
+                if song.get('lead'):
+                    leaders = parse_multiple_leaders(song['lead'])
+                    matched_ids = match_leaders_to_people(leaders, people)
+                    song['matched_person_ids'] = matched_ids
+                    song['matched_person_id'] = matched_ids[0] if matched_ids else None
+                    song['parsed_leaders'] = leaders
+
+            extracted_data['filename'] = pdf_file.name
+            all_extracted.append(extracted_data)
+
+        except Exception as e:
+            messages.error(request, f'{pdf_file.name}: Error processing PDF: {str(e)}')
+
+    if not all_extracted:
         return redirect('band:import_services')
 
-    try:
-        # Extract data from PDF - try tables first, then text
-        pdf_text = ""
-        all_tables = []
+    # Store in session for confirmation step
+    request.session['pdf_extracted_data_list'] = all_extracted
 
-        with pdfplumber.open(pdf_file) as pdf:
-            for page in pdf.pages:
-                # Try to extract tables first (better for Planning Center exports)
-                tables = page.extract_tables()
-                if tables:
-                    all_tables.extend(tables)
-
-                # Also get text as fallback
-                page_text = page.extract_text()
-                if page_text:
-                    pdf_text += page_text + "\n"
-
-        # Try table extraction first if we found tables
-        if all_tables:
-            extracted_data = parse_pdf_table_data(all_tables)
-            extracted_data['raw_text'] = pdf_text  # Keep raw text for reference
-
-            # If table parsing found songs, use it
-            if extracted_data['songs']:
-                # Get people for lead matching
-                people = Person.objects.filter(church=church).filter(Q(lead_vocal=True) | Q(harmony_vocal=True)).order_by('name')
-
-                # Try to match extracted lead names with people in database
-                for song in extracted_data['songs']:
-                    if song.get('lead'):
-                        # Parse multiple leaders
-                        leaders = parse_multiple_leaders(song['lead'])
-                        matched_ids = match_leaders_to_people(leaders, people)
-
-                        # Store matched IDs (can be multiple)
-                        song['matched_person_ids'] = matched_ids
-                        # Keep first one for backward compatibility
-                        song['matched_person_id'] = matched_ids[0] if matched_ids else None
-                        # Store parsed leader names for display
-                        song['parsed_leaders'] = leaders
-
-                request.session['pdf_extracted_data'] = extracted_data
-                return render(request, 'band/import_pdf_review.html', {
-                    'extracted': extracted_data,
-                    'people': people,
-                })
-
-        # Fall back to text parsing
-        if not pdf_text.strip():
-            messages.error(request, 'Could not extract text from PDF. The PDF may be image-based or empty.')
-            return redirect('band:import_services')
-
-        # Parse the PDF text
-        extracted_data = parse_pdf_for_service_data(pdf_text)
-
-        # Get people for lead matching
-        people = Person.objects.filter(church=church).filter(Q(lead_vocal=True) | Q(harmony_vocal=True)).order_by('name')
-
-        # Try to match extracted lead names with people in database
-        for song in extracted_data['songs']:
-            if song.get('lead'):
-                # Parse multiple leaders
-                leaders = parse_multiple_leaders(song['lead'])
-                matched_ids = match_leaders_to_people(leaders, people)
-
-                # Store matched IDs (can be multiple)
-                song['matched_person_ids'] = matched_ids
-                # Keep first one for backward compatibility
-                song['matched_person_id'] = matched_ids[0] if matched_ids else None
-                # Store parsed leader names for display
-                song['parsed_leaders'] = leaders
-
-        # Store in session for confirmation step
-        request.session['pdf_extracted_data'] = extracted_data
-
-        return render(request, 'band/import_pdf_review.html', {
-            'extracted': extracted_data,
-            'people': people,
-        })
-
-    except Exception as e:
-        messages.error(request, f'Error processing PDF: {str(e)}')
-        return redirect('band:import_services')
+    return render(request, 'band/import_pdf_review.html', {
+        'extracted_list': all_extracted,
+        'people': people,
+    })
 
 
 @login_required
 @admin_required
 def confirm_pdf_import(request):
-    """Handle PDF import confirmation"""
+    """Handle PDF import confirmation (supports multiple PDFs)"""
     if request.method == 'POST' and 'confirm_import' in request.POST:
         try:
-            # Get data from form
-            service_date = request.POST.get('service_date')
-            service_name = request.POST.get('service_name')
-
-            # Validate date
-            try:
-                parsed_date = datetime.strptime(service_date, '%Y-%m-%d').date()
-            except ValueError:
-                messages.error(request, 'Invalid date format. Please use YYYY-MM-DD.')
-                return redirect('band:import_services')
-
             church = get_active_church(request)
             if not church:
                 messages.error(request, 'Please select a church first.')
                 return redirect('band:home')
 
-            # Generate Plan ID (scoped to church)
-            last_service = Service.objects.filter(church=church).order_by('-plan_id').first()
-            if last_service and last_service.plan_id.startswith('SV'):
-                try:
-                    next_num = int(last_service.plan_id[2:]) + 1
-                except:
-                    next_num = 1
-            else:
-                next_num = 1
-            plan_id = f"SV{next_num:03d}"
+            pdf_count = int(request.POST.get('pdf_count', 1))
+            total_services = 0
+            total_songs_added = 0
+            total_songs_created = 0
 
-            # Create service
-            service = Service.objects.create(
-                plan_id=plan_id,
-                service_date=parsed_date,
-                service_name=service_name,
-                band_notes=request.POST.get('band_notes', ''),
-                service_notes=request.POST.get('service_notes', ''),
-                church=church,
-            )
+            for p in range(pdf_count):
+                fp = f'pdf_{p}_'  # field prefix for this PDF
 
-            # Process songs
-            song_count = int(request.POST.get('song_count', 0))
-            songs_created = 0
-            songs_added = 0
-
-            for i in range(song_count):
-                song_title = request.POST.get(f'song_title_{i}', '').strip()
-                if not song_title:
+                service_date = request.POST.get(f'{fp}service_date', '').strip()
+                service_name = request.POST.get(f'{fp}service_name', '').strip()
+                if not service_date or not service_name:
                     continue
 
-                song_artist = request.POST.get(f'song_artist_{i}', '').strip()
-                song_key = request.POST.get(f'song_key_{i}', '').strip()
-                song_length = request.POST.get(f'song_length_{i}', '').strip()
-                song_order = int(request.POST.get(f'song_order_{i}', i + 1))
+                try:
+                    parsed_date = datetime.strptime(service_date, '%Y-%m-%d').date()
+                except ValueError:
+                    messages.error(request, f'PDF {p + 1}: Invalid date format.')
+                    continue
 
-                # Collect all lead persons for this song (supports multiple leaders)
-                lead_person_ids = []
-                for j in range(20):  # Support up to 20 leaders per song
-                    lead_id = request.POST.get(f'lead_person_{i}_{j}', '').strip()
-                    if lead_id and lead_id not in lead_person_ids:
-                        lead_person_ids.append(lead_id)
-
-                # Generate Song ID (scoped to church)
-                last_song = Song.objects.filter(church=church).order_by('-song_id').first()
-                if last_song and last_song.song_id.startswith('S'):
+                # Generate Plan ID (fresh query each iteration to avoid duplicates)
+                last_service = Service.objects.filter(church=church).order_by('-plan_id').first()
+                if last_service and last_service.plan_id.startswith('SV'):
                     try:
-                        next_song_num = int(last_song.song_id[1:]) + 1
+                        next_num = int(last_service.plan_id[2:]) + 1
                     except:
-                        next_song_num = 1
+                        next_num = 1
                 else:
-                    next_song_num = 1
-                new_song_id = f"S{next_song_num:03d}"
+                    next_num = 1
+                plan_id = f"SV{next_num:03d}"
 
-                # Check if song exists by title and artist (scoped to church)
-                existing_song = Song.objects.filter(
+                service = Service.objects.create(
+                    plan_id=plan_id,
+                    service_date=parsed_date,
+                    service_name=service_name,
+                    band_notes=request.POST.get(f'{fp}band_notes', ''),
+                    service_notes=request.POST.get(f'{fp}service_notes', ''),
                     church=church,
-                    title__iexact=song_title,
-                    artist__iexact=song_artist
-                ).first()
-
-                if existing_song:
-                    song = existing_song
-                    # Update length on existing song if we now have it and it was blank
-                    if song_length and not song.length:
-                        song.length = song_length
-                        song.save()
-                else:
-                    # Try to fetch song info from PraiseCharts
-                    song_info = fetch_song_info_from_internet(song_title, song_artist)
-                    final_key = song_info['key'] if song_info['key'] else (song_key if song_key else 'C')
-                    final_length = song_length or song_info.get('length') or ''
-
-                    song = Song.objects.create(
-                        song_id=new_song_id,
-                        title=song_title,
-                        artist=song_artist,
-                        default_key=final_key,
-                        tempo=song_info['tempo'] or '',
-                        bpm=song_info['bpm'],
-                        length=final_length,
-                        church=church,
-                    )
-                    songs_created += 1
-
-                    if song_info['key']:
-                        messages.info(request, f"Created '{song_title}' with key {final_key} (found online)")
-
-                # Get primary lead person (first one) for ServiceSong
-                primary_lead_person = None
-                if lead_person_ids:
-                    try:
-                        primary_lead_person = Person.objects.get(person_id=lead_person_ids[0], church=church)
-                    except Person.DoesNotExist:
-                        pass
-
-                # Add song to service
-                ServiceSong.objects.create(
-                    service=service,
-                    song=song,
-                    song_order=song_order,
-                    key_used=song_key if song_key else song.default_key,
-                    lead_person=primary_lead_person
                 )
-                songs_added += 1
+                total_services += 1
 
-                # Update song's last_used and times_used
-                if song.last_used is None or parsed_date > song.last_used:
-                    song.last_used = parsed_date
-                song.times_used += 1
-                song.save()
+                song_count = int(request.POST.get(f'{fp}song_count', 0))
+                songs_added = 0
+                songs_created = 0
 
-                # Create/update song preferences for ALL leaders
-                for lead_person_id in lead_person_ids:
-                    try:
-                        lead_person = Person.objects.get(person_id=lead_person_id, church=church)
-                        pref, created = PersonSongPreference.objects.get_or_create(
-                            person=lead_person,
-                            song=song,
-                            defaults={
-                                'entry_id': f"E{PersonSongPreference.objects.count() + 1:03d}",
-                                'preferred_key': song_key if song_key else song.default_key,
-                                'can_lead': True,
-                                'confidence': 'high',
-                            }
+                for i in range(song_count):
+                    song_title = request.POST.get(f'{fp}song_title_{i}', '').strip()
+                    if not song_title:
+                        continue
+
+                    song_artist = request.POST.get(f'{fp}song_artist_{i}', '').strip()
+                    song_key = request.POST.get(f'{fp}song_key_{i}', '').strip()
+                    song_length = request.POST.get(f'{fp}song_length_{i}', '').strip()
+                    song_order = int(request.POST.get(f'{fp}song_order_{i}', i + 1))
+
+                    # Collect all lead persons for this song (supports multiple leaders)
+                    lead_person_ids = []
+                    for j in range(20):
+                        lead_id = request.POST.get(f'{fp}lead_person_{i}_{j}', '').strip()
+                        if lead_id and lead_id not in lead_person_ids:
+                            lead_person_ids.append(lead_id)
+
+                    # Generate Song ID (scoped to church)
+                    last_song = Song.objects.filter(church=church).order_by('-song_id').first()
+                    if last_song and last_song.song_id.startswith('S'):
+                        try:
+                            next_song_num = int(last_song.song_id[1:]) + 1
+                        except:
+                            next_song_num = 1
+                    else:
+                        next_song_num = 1
+                    new_song_id = f"S{next_song_num:03d}"
+
+                    # Check if song exists by title and artist (scoped to church)
+                    existing_song = Song.objects.filter(
+                        church=church,
+                        title__iexact=song_title,
+                        artist__iexact=song_artist
+                    ).first()
+
+                    if existing_song:
+                        song = existing_song
+                        if song_length and not song.length:
+                            song.length = song_length
+                            song.save()
+                    else:
+                        song_info = fetch_song_info_from_internet(song_title, song_artist)
+                        final_key = song_info['key'] if song_info['key'] else (song_key if song_key else 'C')
+                        final_length = song_length or song_info.get('length') or ''
+
+                        song = Song.objects.create(
+                            song_id=new_song_id,
+                            title=song_title,
+                            artist=song_artist,
+                            default_key=final_key,
+                            tempo=song_info['tempo'] or '',
+                            bpm=song_info['bpm'],
+                            length=final_length,
+                            church=church,
                         )
-                        if not created and not pref.can_lead:
-                            # Update existing preference to mark they can lead
-                            pref.can_lead = True
-                            pref.save()
-                    except Person.DoesNotExist:
-                        pass
+                        songs_created += 1
+
+                        if song_info['key']:
+                            messages.info(request, f"Created '{song_title}' with key {final_key} (found online)")
+
+                    # Get primary lead person (first one) for ServiceSong
+                    primary_lead_person = None
+                    if lead_person_ids:
+                        try:
+                            primary_lead_person = Person.objects.get(person_id=lead_person_ids[0], church=church)
+                        except Person.DoesNotExist:
+                            pass
+
+                    ServiceSong.objects.create(
+                        service=service,
+                        song=song,
+                        song_order=song_order,
+                        key_used=song_key if song_key else song.default_key,
+                        lead_person=primary_lead_person
+                    )
+                    songs_added += 1
+
+                    if song.last_used is None or parsed_date > song.last_used:
+                        song.last_used = parsed_date
+                    song.times_used += 1
+                    song.save()
+
+                    # Create/update song preferences for ALL leaders
+                    for lead_person_id in lead_person_ids:
+                        try:
+                            lead_person = Person.objects.get(person_id=lead_person_id, church=church)
+                            pref, created = PersonSongPreference.objects.get_or_create(
+                                person=lead_person,
+                                song=song,
+                                defaults={
+                                    'entry_id': f"E{PersonSongPreference.objects.count() + 1:03d}",
+                                    'preferred_key': song_key if song_key else song.default_key,
+                                    'can_lead': True,
+                                    'confidence': 'high',
+                                }
+                            )
+                            if not created and not pref.can_lead:
+                                pref.can_lead = True
+                                pref.save()
+                        except Person.DoesNotExist:
+                            pass
+
+                total_songs_added += songs_added
+                total_songs_created += songs_created
 
             # Clear session data
-            if 'pdf_extracted_data' in request.session:
-                del request.session['pdf_extracted_data']
+            for key in ['pdf_extracted_data', 'pdf_extracted_data_list']:
+                if key in request.session:
+                    del request.session[key]
 
-            messages.success(request, f'Successfully created service "{service_name}" with {songs_added} song(s). {songs_created} new song(s) added to library.')
+            messages.success(request, f'Successfully imported {total_services} service(s) with {total_songs_added} song(s). {total_songs_created} new song(s) added to library.')
             return redirect('band:home')
 
         except Exception as e:

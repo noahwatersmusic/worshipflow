@@ -142,8 +142,8 @@
             {% csrf_token %}
             <input type="hidden" name="import_type" value="csv">
             <div style="margin-bottom: 15px;">
-                <label for="csv_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select CSV File:</label>
-                <input type="file" id="csv_file" name="csv_file" accept=".csv" required style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
+                <label for="csv_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select CSV File(s):</label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv" required multiple style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
             </div>
             <button type="submit">Upload and Import</button>
         </form>
@@ -205,8 +205,8 @@
             {% csrf_token %}
             <input type="hidden" name="import_type" value="pdf">
             <div style="margin-bottom: 15px;">
-                <label for="pdf_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select PDF File:</label>
-                <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
+                <label for="pdf_file" style="display: block; margin-bottom: 8px; font-weight: 600;">Select PDF File(s):</label>
+                <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required multiple style="padding: 10px; border: 2px dashed #ddd; border-radius: 4px; width: 100%; max-width: 500px;">
             </div>
             <button type="submit">Upload and Extract</button>
         </form>
