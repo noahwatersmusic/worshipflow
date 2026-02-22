@@ -46,6 +46,7 @@
                 <th>Service Name</th>
                 <th>Plan ID</th>
                 <th>Songs</th>
+                <th>Length</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -56,6 +57,7 @@
                 <td>{{ service.service_name }}</td>
                 <td><span class="badge badge-info">{{ service.plan_id }}</span></td>
                 <td>{{ service.song_count }} song{{ service.song_count|pluralize }}</td>
+                <td>{{ service.total_length|default:"—" }}</td>
                 <td>
                     <a href="{% url 'band:service_detail' service.plan_id %}" class="btn" style="padding: 4px 10px; font-size: 12px;">View</a>
                 </td>

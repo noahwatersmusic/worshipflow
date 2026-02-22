@@ -20,6 +20,31 @@ from bs4 import BeautifulSoup
 import pdfplumber
 
 
+def parse_song_length_to_seconds(song_length_str, service_song_length_int=None):
+    """Parse song length to total seconds.
+    Prefers Song.length (M:SS string), falls back to ServiceSong.length (int minutes).
+    """
+    if song_length_str:
+        try:
+            parts = song_length_str.strip().split(':')
+            return int(parts[0]) * 60 + int(parts[1])
+        except (ValueError, IndexError):
+            pass
+    if service_song_length_int is not None:
+        return service_song_length_int * 60
+    return 0
+
+
+def format_service_length(total_seconds):
+    """Format total seconds into a human-readable service length string."""
+    if total_seconds == 0:
+        return None
+    total_min = total_seconds // 60
+    if total_min >= 60:
+        return f"{total_min // 60}h {total_min % 60}m"
+    return f"{total_min} min"
+
+
 def get_active_church(request):
     """Get the active church for the current user.
     SuperAdmin: reads from session (church switcher).
@@ -1577,6 +1602,15 @@ def services_list(request):
     # Add song count annotation
     services = services.annotate(song_count=Count('songs'))
 
+    # Compute total length for each service from prefetched song data
+    services = list(services)
+    for service in services:
+        total_sec = sum(
+            parse_song_length_to_seconds(ss.song.length, ss.length)
+            for ss in service.songs.all()
+        )
+        service.total_length = format_service_length(total_sec)
+
     context = {
         'services': services,
     }
@@ -1592,9 +1626,15 @@ def service_detail(request, plan_id):
     service = get_object_or_404(Service, plan_id=plan_id, church=church)
     service_songs = ServiceSong.objects.filter(service=service).select_related('song', 'lead_person').order_by('song_order')
 
+    total_sec = sum(
+        parse_song_length_to_seconds(ss.song.length, ss.length)
+        for ss in service_songs
+    )
+
     context = {
         'service': service,
         'service_songs': service_songs,
+        'total_length': format_service_length(total_sec),
     }
     return render(request, 'band/service_detail.html', context)
 
