@@ -51,6 +51,7 @@
             <tr>
                 <th>Song</th>
                 <th>Artist</th>
+                <th>Length</th>
                 <th>Preferred Key</th>
                 <th>Default Key</th>
                 <th>Can Lead</th>
@@ -62,6 +63,7 @@
             <tr>
                 <td><a href="{% url 'band:song_detail' pref.song.song_id %}"><strong>{{ pref.song.title }}</strong></a></td>
                 <td>{{ pref.song.artist }}</td>
+                <td>{{ pref.song.length|default:"—" }}</td>
                 <td><span class="badge badge-success">{{ pref.preferred_key }}</span></td>
                 <td><span class="badge badge-info">{{ pref.song.default_key }}</span></td>
                 <td>{% if pref.can_lead %}<span class="badge badge-success">Yes</span>{% endif %}</td>
@@ -74,7 +76,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">No songs found matching the criteria.</td>
+                <td colspan="7">No songs found matching the criteria.</td>
             </tr>
             {% endfor %}
         </tbody>

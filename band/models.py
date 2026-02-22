@@ -110,6 +110,7 @@ class Song(models.Model):
     default_key = models.CharField(max_length=10, help_text="e.g., D, G, A")
     tempo = models.CharField(max_length=20, choices=TEMPO_CHOICES, blank=True)
     bpm = models.IntegerField(blank=True, null=True, help_text="Beats per minute")
+    length = models.CharField(max_length=10, blank=True, help_text="Song length e.g. 4:48")
     style = models.CharField(max_length=100, blank=True)
 
     # Tracking

@@ -44,6 +44,7 @@
                 <th>Title</th>
                 <th>Artist</th>
                 <th>Key</th>
+                <th>Length</th>
                 <th>Last Used</th>
                 <th>Times Used</th>
                 <th>Actions</th>
@@ -55,13 +56,14 @@
                 <td><strong>{{ song.title }}</strong></td>
                 <td>{{ song.artist }}</td>
                 <td><span class="badge badge-info">{{ song.default_key }}</span></td>
+                <td>{{ song.length|default:"—" }}</td>
                 <td>{{ song.computed_last_used|date:"M d, Y"|default:"—" }}</td>
                 <td>{{ song.computed_times_used }}</td>
                 <td><a href="{% url 'band:song_detail' song.song_id %}">View Details</a></td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">No songs found.</td>
+                <td colspan="7">No songs found.</td>
             </tr>
             {% endfor %}
         </tbody>

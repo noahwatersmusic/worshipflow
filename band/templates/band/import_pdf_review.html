@@ -61,6 +61,7 @@
                         <th>Song Title</th>
                         <th>Artist</th>
                         <th style="width: 80px;">Key</th>
+                        <th style="width: 70px;">Length</th>
                         <th>Lead Vocalist(s)</th>
                         <th style="width: 60px;">Remove</th>
                     </tr>
@@ -79,6 +80,9 @@
                         </td>
                         <td>
                             <input type="text" name="song_key_{{ forloop.counter0 }}" value="{{ song.key }}" placeholder="Auto" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                        </td>
+                        <td>
+                            <input type="text" name="song_length_{{ forloop.counter0 }}" value="{{ song.length }}" placeholder="e.g. 4:48" style="width: 60px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
                         </td>
                         <td>
                             <div id="leaders_container_{{ forloop.counter0 }}">

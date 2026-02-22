@@ -47,7 +47,7 @@ def fetch_song_info_from_internet(title, artist):
     Search PraiseCharts for original key, tempo, and BPM of a worship song.
     Returns a dict with 'key', 'tempo', and 'bpm' (any may be None).
     """
-    result = {'key': None, 'tempo': None, 'bpm': None}
+    result = {'key': None, 'tempo': None, 'bpm': None, 'length': None}
     try:
         if not title:
             return result
@@ -117,6 +117,19 @@ def fetch_song_info_from_internet(title, artist):
         bpm_json = re.search(r'"bpm":"(\d+)"', page_text)
         if bpm_json:
             result['bpm'] = int(bpm_json.group(1))
+
+        # Try to extract song length (M:SS or MM:SS format)
+        for length_pattern in [
+            r'"duration":"(\d{1,2}:\d{2})"',
+            r'"length":"(\d{1,2}:\d{2})"',
+            r'"time":"(\d{1,2}:\d{2})"',
+            r'Duration[:\s]+(\d{1,2}:\d{2})',
+            r'Length[:\s]+(\d{1,2}:\d{2})',
+        ]:
+            length_match = re.search(length_pattern, page_text, re.IGNORECASE)
+            if length_match:
+                result['length'] = length_match.group(1)
+                break
 
         # Fallback for key: parse HTML text
         if not result['key']:
@@ -1158,6 +1171,7 @@ def confirm_pdf_import(request):
 
                 song_artist = request.POST.get(f'song_artist_{i}', '').strip()
                 song_key = request.POST.get(f'song_key_{i}', '').strip()
+                song_length = request.POST.get(f'song_length_{i}', '').strip()
                 song_order = int(request.POST.get(f'song_order_{i}', i + 1))
 
                 # Collect all lead persons for this song (supports multiple leaders)
@@ -1187,10 +1201,15 @@ def confirm_pdf_import(request):
 
                 if existing_song:
                     song = existing_song
+                    # Update length on existing song if we now have it and it was blank
+                    if song_length and not song.length:
+                        song.length = song_length
+                        song.save()
                 else:
                     # Try to fetch song info from PraiseCharts
                     song_info = fetch_song_info_from_internet(song_title, song_artist)
                     final_key = song_info['key'] if song_info['key'] else (song_key if song_key else 'C')
+                    final_length = song_length or song_info.get('length') or ''
 
                     song = Song.objects.create(
                         song_id=new_song_id,
@@ -1199,6 +1218,7 @@ def confirm_pdf_import(request):
                         default_key=final_key,
                         tempo=song_info['tempo'] or '',
                         bpm=song_info['bpm'],
+                        length=final_length,
                         church=church,
                     )
                     songs_created += 1
@@ -1328,6 +1348,7 @@ def song_edit_review(request, song_id):
         'default_key': request.POST.get('default_key', '').strip(),
         'tempo': request.POST.get('tempo', ''),
         'bpm': request.POST.get('bpm', '').strip(),
+        'length': request.POST.get('length', '').strip(),
         'style': request.POST.get('style', '').strip(),
         'arrangement_notes': request.POST.get('arrangement_notes', '').strip(),
         'comfort_level': request.POST.get('comfort_level', '').strip(),
@@ -1348,6 +1369,7 @@ def song_edit_review(request, song_id):
         ('default_key', 'Default Key', song.default_key),
         ('tempo', 'Tempo', song.tempo or ''),
         ('bpm', 'BPM', str(song.bpm) if song.bpm else ''),
+        ('length', 'Length', song.length or ''),
         ('style', 'Style', song.style or ''),
         ('arrangement_notes', 'Arrangement Notes', song.arrangement_notes or ''),
         ('comfort_level', 'Comfort Level', song.comfort_level or ''),
@@ -1402,6 +1424,7 @@ def song_edit_confirm(request, song_id):
         song.tempo = request.POST.get('tempo', '') or None
         bpm_str = request.POST.get('bpm', '').strip()
         song.bpm = int(bpm_str) if bpm_str else None
+        song.length = request.POST.get('length', '').strip()
         song.style = request.POST.get('style', '').strip() or None
         song.arrangement_notes = request.POST.get('arrangement_notes', '').strip()
         song.comfort_level = request.POST.get('comfort_level', '').strip()
@@ -1588,9 +1611,10 @@ def song_add(request):
             default_key = request.POST.get('default_key', '').strip()
             tempo = request.POST.get('tempo', '')
             bpm_str = request.POST.get('bpm', '').strip()
+            length = request.POST.get('length', '').strip()
 
-            # Fetch song info from PraiseCharts if key, tempo, or BPM is missing
-            if not default_key or not tempo or not bpm_str:
+            # Fetch song info from PraiseCharts if key, tempo, BPM, or length is missing
+            if not default_key or not tempo or not bpm_str or not length:
                 song_info = fetch_song_info_from_internet(title, artist)
                 if not default_key and song_info['key']:
                     default_key = song_info['key']
@@ -1599,6 +1623,8 @@ def song_add(request):
                     tempo = song_info['tempo']
                 if not bpm_str and song_info['bpm']:
                     bpm_str = str(song_info['bpm'])
+                if not length and song_info.get('length'):
+                    length = song_info['length']
 
             # Create the song
             song = Song.objects.create(
@@ -1608,6 +1634,7 @@ def song_add(request):
                 default_key=default_key or 'C',
                 tempo=tempo or '',
                 bpm=int(bpm_str) if bpm_str else None,
+                length=length,
                 style=request.POST.get('style', '').strip() or None,
                 arrangement_notes=request.POST.get('arrangement_notes', '').strip(),
                 comfort_level=request.POST.get('comfort_level', '').strip(),
@@ -1685,7 +1712,7 @@ def refresh_song_keys(request):
         for song in songs:
             try:
                 song_info = fetch_song_info_from_internet(song.title, song.artist)
-                if song_info['key'] or song_info['tempo'] or song_info['bpm']:
+                if song_info['key'] or song_info['tempo'] or song_info['bpm'] or song_info.get('length'):
                     changed = False
                     changes = []
 
@@ -1700,6 +1727,10 @@ def refresh_song_keys(request):
 
                     if song_info['bpm'] and song_info['bpm'] != song.bpm:
                         song.bpm = song_info['bpm']
+                        changed = True
+
+                    if song_info.get('length') and not song.length:
+                        song.length = song_info['length']
                         changed = True
 
                     if changed:
