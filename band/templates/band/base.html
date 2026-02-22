@@ -260,7 +260,10 @@
                     {% if user_role %}
                     <span class="role-badge role-{{ user_role }}">{{ user_role }}</span>
                     {% endif %}
-                    <a href="{% url 'logout' %}" class="logout-link">Sign Out</a>
+                    <form method="post" action="{% url 'logout' %}" style="display: inline; margin: 0; padding: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-link" style="background: none; border: none; cursor: pointer; font-size: inherit; font-family: inherit; padding: 0;">Sign Out</button>
+                    </form>
                 </div>
                 {% endif %}
             </div>
