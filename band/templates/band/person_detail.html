@@ -175,11 +175,12 @@
                 <th>Preferred Key</th>
                 <th>Can Lead</th>
                 <th>Confidence</th>
+                {% if is_admin %}<th>Actions</th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for pref in song_preferences %}
-            <tr>
+            <tr id="pref-view-{{ pref.entry_id }}">
                 <td><a href="{% url 'band:song_detail' pref.song.song_id %}">{{ pref.song.title }}</a></td>
                 <td>{{ pref.song.artist }}</td>
                 <td><strong>{{ pref.preferred_key }}</strong></td>
@@ -190,7 +191,38 @@
                     {% elif pref.confidence == 'low' %}<span class="badge badge-info">Low</span>
                     {% endif %}
                 </td>
+                {% if is_admin %}
+                <td>
+                    <button type="button" onclick="editPref('{{ pref.entry_id }}')" style="padding: 3px 10px; font-size: 12px; background: #f39c12;">Edit</button>
+                </td>
+                {% endif %}
             </tr>
+            {% if is_admin %}
+            <tr id="pref-edit-{{ pref.entry_id }}" style="display: none; background: #fef9e7;">
+                <td colspan="6">
+                    <form method="post" action="{% url 'band:preference_edit' pref.entry_id %}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 4px 0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'band:person_detail' person.person_id %}">
+                        <label style="font-size: 13px; color: #333;">Key:
+                            <input type="text" name="preferred_key" value="{{ pref.preferred_key }}" style="width: 50px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; color: #333;">
+                        </label>
+                        <label style="font-size: 13px; color: #333;">
+                            <input type="checkbox" name="can_lead" {% if pref.can_lead %}checked{% endif %}> Can Lead
+                        </label>
+                        <label style="font-size: 13px; color: #333;">Confidence:
+                            <select name="confidence" style="padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; color: #333;">
+                                <option value="high"   {% if pref.confidence == 'high'   %}selected{% endif %}>High</option>
+                                <option value="medium" {% if pref.confidence == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="low"    {% if pref.confidence == 'low'    %}selected{% endif %}>Low</option>
+                                <option value=""       {% if not pref.confidence         %}selected{% endif %}>— unset —</option>
+                            </select>
+                        </label>
+                        <button type="submit" style="padding: 4px 12px; background: #27ae60; font-size: 13px;">Save</button>
+                        <button type="button" onclick="cancelEditPref('{{ pref.entry_id }}')" style="padding: 4px 12px; background: #95a5a6; font-size: 13px;">Cancel</button>
+                    </form>
+                </td>
+            </tr>
+            {% endif %}
             {% endfor %}
         </tbody>
     </table>
@@ -208,6 +240,16 @@ function enterEditMode() {
 function cancelEdit() {
     document.getElementById('edit-mode').style.display = 'none';
     document.getElementById('view-mode').style.display = 'block';
+}
+
+function editPref(id) {
+    document.getElementById('pref-view-' + id).style.display = 'none';
+    document.getElementById('pref-edit-' + id).style.display = '';
+}
+
+function cancelEditPref(id) {
+    document.getElementById('pref-edit-' + id).style.display = 'none';
+    document.getElementById('pref-view-' + id).style.display = '';
 }
 </script>
 

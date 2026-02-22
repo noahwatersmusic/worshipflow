@@ -26,6 +26,7 @@ urlpatterns = [
     path('services/<str:plan_id>/edit/', views.service_edit, name='service_edit'),
     path('services/<str:plan_id>/delete/', views.service_delete, name='service_delete'),
     path('services/<str:plan_id>/delete/confirm/', views.service_delete_confirm, name='service_delete_confirm'),
+    path('preferences/<str:entry_id>/edit/', views.preference_edit, name='preference_edit'),
     path('song-finder/', views.song_finder, name='song_finder'),
     path('import/', views.import_services, name='import_services'),
     path('import/confirm-pdf/', views.confirm_pdf_import, name='confirm_pdf_import'),

@@ -1569,6 +1569,29 @@ def service_edit(request, plan_id):
 
 @login_required
 @admin_required
+def preference_edit(request, entry_id):
+    """Save edited PersonSongPreference (confidence, can_lead, preferred_key, notes)"""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+    pref = get_object_or_404(PersonSongPreference, entry_id=entry_id, person__church=church)
+
+    if request.method != 'POST':
+        return redirect('band:home')
+
+    pref.confidence    = request.POST.get('confidence', '').strip()
+    pref.can_lead      = 'can_lead' in request.POST
+    pref.preferred_key = request.POST.get('preferred_key', '').strip()
+    pref.notes         = request.POST.get('notes', '').strip()
+    pref.save()
+
+    next_url = request.POST.get('next', '')
+    messages.success(request, f'Preference updated for {pref.person.name} — {pref.song.title}.')
+    return redirect(next_url) if next_url else redirect('band:home')
+
+
+@login_required
+@admin_required
 def service_delete(request, plan_id):
     """Show delete confirmation for a service"""
     church = get_active_church(request)
