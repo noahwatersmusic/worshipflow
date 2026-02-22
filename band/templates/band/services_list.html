@@ -42,7 +42,7 @@
                         Date
                         <span style="color: {% if date_active %}#e67e22{% else %}#bdc3c7{% endif %}; font-size: 10px;">▼</span>
                     </div>
-                    <div id="date-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 270px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
+                    <div id="date-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; color: #333; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 270px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
                         <div style="margin-bottom: 12px;">
                             <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Sort</strong>
                             <div style="display: flex; gap: 8px; margin-top: 7px;">
@@ -77,7 +77,7 @@
                         <span style="color: {% if selected_names %}#e67e22{% else %}#bdc3c7{% endif %}; font-size: 10px;">▼</span>
                         {% if selected_names %}<span style="background: #e67e22; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">{{ selected_names|length }}</span>{% endif %}
                     </div>
-                    <div id="name-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 230px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
+                    <div id="name-filter" class="filter-dropdown" style="display: none; position: absolute; left: 0; top: calc(100% + 2px); background: white; color: #333; border: 1px solid #ddd; border-radius: 6px; padding: 14px; min-width: 230px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.15);" onclick="event.stopPropagation()">
                         <strong style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Filter by Name</strong>
                         {% if all_service_names %}
                         <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #f0f0f0; border-radius: 4px; padding: 6px 8px;">
