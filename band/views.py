@@ -118,18 +118,47 @@ def fetch_song_info_from_internet(title, artist):
         if bpm_json:
             result['bpm'] = int(bpm_json.group(1))
 
-        # Try to extract song length (M:SS or MM:SS format)
+        # Try to extract song length
+        # First: look for formatted time string (M:SS or MM:SS) in JSON or HTML
         for length_pattern in [
             r'"duration":"(\d{1,2}:\d{2})"',
             r'"length":"(\d{1,2}:\d{2})"',
             r'"time":"(\d{1,2}:\d{2})"',
-            r'Duration[:\s]+(\d{1,2}:\d{2})',
-            r'Length[:\s]+(\d{1,2}:\d{2})',
+            r'"songLength":"(\d{1,2}:\d{2})"',
         ]:
             length_match = re.search(length_pattern, page_text, re.IGNORECASE)
             if length_match:
                 result['length'] = length_match.group(1)
                 break
+
+        # Second: look for duration stored as integer seconds (e.g. "duration":288)
+        if not result['length']:
+            for sec_pattern in [
+                r'"duration":(\d{2,3})[,}\]]',
+                r'"length":(\d{2,3})[,}\]]',
+                r'"songLength":(\d{2,3})[,}\]]',
+                r'"lengthInSeconds":(\d{2,3})[,}\]]',
+            ]:
+                sec_match = re.search(sec_pattern, page_text)
+                if sec_match:
+                    total_seconds = int(sec_match.group(1))
+                    if 60 <= total_seconds <= 900:  # sanity check: 1–15 minutes
+                        minutes = total_seconds // 60
+                        seconds = total_seconds % 60
+                        result['length'] = f"{minutes}:{seconds:02d}"
+                        break
+
+        # Third: plain text fallback — look for time patterns near duration/length keywords
+        if not result['length']:
+            plain_text = BeautifulSoup(page_text, 'html.parser').get_text()
+            for text_pattern in [
+                r'(?:Duration|Length|Time)[^\d]{0,20}(\d{1,2}:\d{2})',
+                r'(\d{1,2}:\d{2})(?:[^\d]{0,20}(?:min|duration|length))',
+            ]:
+                text_match = re.search(text_pattern, plain_text, re.IGNORECASE)
+                if text_match:
+                    result['length'] = text_match.group(1)
+                    break
 
         # Fallback for key: parse HTML text
         if not result['key']:
