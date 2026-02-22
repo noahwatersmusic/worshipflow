@@ -1535,6 +1535,40 @@ def song_delete_confirm(request, song_id):
 
 @login_required
 @admin_required
+def service_edit(request, plan_id):
+    """Save edited service information"""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+    service = get_object_or_404(Service, plan_id=plan_id, church=church)
+
+    if request.method != 'POST':
+        return redirect('band:service_detail', plan_id=plan_id)
+
+    service_name = request.POST.get('service_name', '').strip()
+    service_date = request.POST.get('service_date', '').strip()
+
+    if not service_name or not service_date:
+        messages.error(request, 'Service Name and Date are required.')
+        return redirect('band:service_detail', plan_id=plan_id)
+
+    try:
+        service.service_name = service_name
+        service.service_date = datetime.strptime(service_date, '%Y-%m-%d').date()
+        service.band_notes = request.POST.get('band_notes', '').strip()
+        service.service_notes = request.POST.get('service_notes', '').strip()
+        service.save()
+        messages.success(request, 'Service updated successfully.')
+    except ValueError:
+        messages.error(request, 'Invalid date format.')
+    except Exception as e:
+        messages.error(request, f'Error updating service: {str(e)}')
+
+    return redirect('band:service_detail', plan_id=plan_id)
+
+
+@login_required
+@admin_required
 def service_delete(request, plan_id):
     """Show delete confirmation for a service"""
     church = get_active_church(request)

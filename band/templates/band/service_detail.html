@@ -3,30 +3,78 @@
 {% block title %}{{ service.service_name }} - WorshipFlow{% endblock %}
 
 {% block content %}
-<h2>{{ service.service_name }}</h2>
+<h2 id="page-title">{{ service.service_name }}</h2>
 
-<div class="card">
-    <h3>Service Information
-        {% if is_admin %}
-        <span style="float: right;">
-            <a href="{% url 'band:service_delete' service.plan_id %}" class="btn" style="background: #e74c3c; padding: 5px 15px; font-size: 12px;">Delete</a>
-        </span>
-        {% endif %}
-    </h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div>
-            <p><strong>Plan ID:</strong> <span class="badge badge-info">{{ service.plan_id }}</span></p>
-            <p><strong>Date:</strong> {{ service.service_date|date:"l, F d, Y" }}</p>
-        </div>
-        <div>
-            {% if service.band_notes %}
-            <p><strong>Band Notes:</strong> {{ service.band_notes }}</p>
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px; {% if message.tags == 'error' %}background: #e74c3c; color: white;{% elif message.tags == 'warning' %}background: #f39c12; color: white;{% else %}background: #27ae60; color: white;{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- View Mode -->
+<div id="view-mode">
+    <div class="card">
+        <h3>Service Information
+            {% if is_admin %}
+            <span style="float: right;">
+                <button type="button" onclick="enterEditMode()" style="background: #f39c12; padding: 5px 15px; font-size: 12px;">Edit</button>
+                <a href="{% url 'band:service_delete' service.plan_id %}" class="btn" style="background: #e74c3c; padding: 5px 15px; font-size: 12px; margin-left: 5px;">Delete</a>
+            </span>
             {% endif %}
-            {% if service.service_notes %}
-            <p><strong>Service Notes:</strong> {{ service.service_notes }}</p>
-            {% endif %}
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <p><strong>Plan ID:</strong> <span class="badge badge-info">{{ service.plan_id }}</span></p>
+                <p><strong>Date:</strong> {{ service.service_date|date:"l, F d, Y" }}</p>
+            </div>
+            <div>
+                {% if service.band_notes %}
+                <p><strong>Band Notes:</strong> {{ service.band_notes }}</p>
+                {% endif %}
+                {% if service.service_notes %}
+                <p><strong>Service Notes:</strong> {{ service.service_notes }}</p>
+                {% endif %}
+            </div>
         </div>
     </div>
+</div>
+
+<!-- Edit Mode -->
+<div id="edit-mode" style="display: none;">
+    <form method="post" action="{% url 'band:service_edit' service.plan_id %}">
+        {% csrf_token %}
+        <div class="card">
+            <h3>Edit Service Information
+                <button type="button" onclick="cancelEdit()" style="float: right; background: #95a5a6; padding: 5px 15px; font-size: 12px;">Cancel</button>
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="filter-group">
+                    <label for="service_name">Service Name *</label>
+                    <input type="text" id="service_name" name="service_name" value="{{ service.service_name }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="service_date">Service Date *</label>
+                    <input type="date" id="service_date" name="service_date" value="{{ service.service_date|date:'Y-m-d' }}" required style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+                </div>
+                <div class="filter-group">
+                    <label for="band_notes">Band Notes</label>
+                    <textarea id="band_notes" name="band_notes" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ service.band_notes }}</textarea>
+                </div>
+                <div class="filter-group">
+                    <label for="service_notes">Service Notes</label>
+                    <textarea id="service_notes" name="service_notes" rows="2" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">{{ service.service_notes }}</textarea>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button type="submit" style="background: #27ae60;">Save Changes</button>
+                <button type="button" onclick="cancelEdit()" style="background: #95a5a6; margin-left: 10px;">Cancel</button>
+            </div>
+        </div>
+    </form>
 </div>
 
 <div class="card">
@@ -87,5 +135,17 @@
 </div>
 
 <p><a href="{% url 'band:services_list' %}">&larr; Back to Services</a></p>
+
+<script>
+function enterEditMode() {
+    document.getElementById('view-mode').style.display = 'none';
+    document.getElementById('edit-mode').style.display = 'block';
+}
+
+function cancelEdit() {
+    document.getElementById('edit-mode').style.display = 'none';
+    document.getElementById('view-mode').style.display = 'block';
+}
+</script>
 
 {% endblock %}

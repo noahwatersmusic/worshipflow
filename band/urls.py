@@ -23,6 +23,7 @@ urlpatterns = [
     path('services/', views.services_list, name='services_list'),
     path('services/add/', views.service_add, name='service_add'),
     path('services/<str:plan_id>/', views.service_detail, name='service_detail'),
+    path('services/<str:plan_id>/edit/', views.service_edit, name='service_edit'),
     path('services/<str:plan_id>/delete/', views.service_delete, name='service_delete'),
     path('services/<str:plan_id>/delete/confirm/', views.service_delete_confirm, name='service_delete_confirm'),
     path('song-finder/', views.song_finder, name='song_finder'),
