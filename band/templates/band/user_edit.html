@@ -43,8 +43,14 @@
             <div style="grid-column: 1 / -1;">
                 <label for="new_password" style="display: block; font-weight: 600; margin-bottom: 5px;">Reset Password (leave blank to keep current)</label>
                 <div style="position: relative;">
-                    <input type="password" id="new_password" name="new_password" style="width: 100%; padding: 8px 12px; padding-right: 40px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <input type="password" id="new_password" name="new_password" style="width: 100%; padding: 8px 12px; padding-right: 40px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;" oninput="checkStrength(this.value)">
                     <button type="button" onclick="togglePassword('new_password', this)" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7f8c8d; cursor: pointer; padding: 2px 4px; font-size: 13px;">Show</button>
+                </div>
+                <div id="pw-requirements" style="display: none; margin-top: 8px; font-size: 12px; line-height: 1.8;">
+                    <div id="req-length"  style="color: #bdc3c7;">✗ At least 8 characters</div>
+                    <div id="req-upper"   style="color: #bdc3c7;">✗ At least one uppercase letter</div>
+                    <div id="req-number"  style="color: #bdc3c7;">✗ At least one number</div>
+                    <div id="req-special" style="color: #bdc3c7;">✗ At least one special character (! @ # $ % ^ &amp; * - _ = + etc.)</div>
                 </div>
                 <p style="color: #95a5a6; font-size: 12px; margin-top: 4px;">If set, the user will be required to change it on next login.</p>
             </div>
@@ -66,6 +72,20 @@ function togglePassword(inputId, btn) {
         input.type = 'password';
         btn.textContent = 'Show';
     }
+}
+function checkStrength(val) {
+    var reqs = document.getElementById('pw-requirements');
+    reqs.style.display = val.length > 0 ? 'block' : 'none';
+    var special = /[!@#$%^&*()\-_=+\[\]{}|;:,.<>?\/~]/;
+    set('req-length',  val.length >= 8);
+    set('req-upper',   /[A-Z]/.test(val));
+    set('req-number',  /[0-9]/.test(val));
+    set('req-special', special.test(val));
+}
+function set(id, ok) {
+    var el = document.getElementById(id);
+    el.style.color = ok ? '#27ae60' : '#bdc3c7';
+    el.textContent = (ok ? '✓' : '✗') + el.textContent.slice(1);
 }
 </script>
 {% endblock %}

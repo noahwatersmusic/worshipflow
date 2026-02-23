@@ -2183,6 +2183,20 @@ def user_edit(request, user_id):
         target_user.first_name = first_name
         target_user.last_name = last_name
         if new_password:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError as VE
+            try:
+                validate_password(new_password, target_user)
+            except VE as e:
+                for err in e.messages:
+                    messages.error(request, err)
+                return render(request, 'band/user_edit.html', {
+                    'target_user': target_user,
+                    'profile': profile,
+                    'churches': Church.objects.filter(is_active=True) if caller_profile.is_superadmin else None,
+                    'role_choices': UserProfile.ROLE_CHOICES if caller_profile.is_superadmin else None,
+                    'is_superadmin': caller_profile.is_superadmin,
+                })
             target_user.set_password(new_password)
             profile.must_change_password = True
         target_user.save()
@@ -2290,11 +2304,17 @@ def change_password(request):
 
         if not new_password:
             messages.error(request, 'Password cannot be empty.')
-        elif len(new_password) < 6:
-            messages.error(request, 'Password must be at least 6 characters.')
         elif new_password != confirm_password:
             messages.error(request, 'Passwords do not match.')
         else:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError as VE
+            try:
+                validate_password(new_password, request.user)
+            except VE as e:
+                for err in e.messages:
+                    messages.error(request, err)
+                return render(request, 'band/change_password.html')
             request.user.set_password(new_password)
             request.user.save()
 
