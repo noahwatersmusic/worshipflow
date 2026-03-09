@@ -2106,7 +2106,7 @@ def user_add(request):
                         f'An account has been created for you on SideNote for {church_name}.\n\n'
                         f'Email (login): {email}\n'
                         f'Temporary password: {temp_password}\n\n'
-                        f'Sign in here: https://worshipflow-mu.vercel.app/login/\n\n'
+                        f'Sign in here: https://sidenotemusic.app/login/\n\n'
                         f'You will be asked to set a new password when you first log in.\n\n'
                         f'- {church_name}'
                     ),

@@ -146,7 +146,7 @@ if EMAIL_HOST:
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@sidenote.app')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@sidenotemusic.app')
 
 # Production security settings
 if not DEBUG:
