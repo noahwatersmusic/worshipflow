@@ -70,7 +70,7 @@ def initial_setup(request):
 
         church = Church.objects.create(name='Default Church', slug='default-church')
 
-        email = request.GET.get('email', 'admin@worshipflow.app')
+        email = request.GET.get('email', 'admin@sidenotemusic.app')
         password = request.GET.get('password', 'changeme123')
 
         user = User.objects.create_user(
