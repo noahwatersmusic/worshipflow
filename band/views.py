@@ -517,6 +517,238 @@ def song_finder(request):
 
 @login_required
 @admin_required
+def pco_connect(request):
+    """Save or remove Planning Center Personal Access Token credentials."""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action == 'disconnect':
+            church.pco_app_id = ''
+            church.pco_secret = ''
+            church.save()
+            messages.success(request, 'Planning Center disconnected.')
+        elif action == 'save':
+            from .pco_client import PCOClient
+            app_id = request.POST.get('pco_app_id', '').strip()
+            secret = request.POST.get('pco_secret', '').strip()
+            if not (app_id and secret):
+                messages.error(request, 'Both Application ID and Secret are required.')
+            else:
+                try:
+                    name = PCOClient(app_id, secret).test_connection()
+                    church.pco_app_id = app_id
+                    church.pco_secret = secret
+                    church.save()
+                    messages.success(request, f'Connected to Planning Center as {name}.')
+                except Exception as e:
+                    messages.error(request, f'Connection failed: {e}')
+        return redirect('band:pco_connect')
+
+    return render(request, 'band/pco_connect.html', {'church': church})
+
+
+@login_required
+@admin_required
+def pco_import(request):
+    """Multi-phase Planning Center import: select → plans → preview → confirm."""
+    church = get_active_church(request)
+    if not church:
+        return redirect('band:home')
+    if not church.pco_connected:
+        messages.error(request, 'Connect to Planning Center first.')
+        return redirect('band:pco_connect')
+
+    from .pco_client import PCOClient, parse_plan_songs, parse_plan_members
+    client = PCOClient(church.pco_app_id, church.pco_secret)
+
+    action = request.POST.get('action', '') if request.method == 'POST' else ''
+
+    try:
+        # ── Phase: list plans for a service type ──────────────────────────────
+        if action == 'list_plans':
+            service_type_id = request.POST.get('service_type_id', '')
+            filter_type = request.POST.get('filter', 'future')
+            service_types = client.get_service_types()
+            plans = client.get_plans(service_type_id, filter=filter_type)
+            service_type_name = next(
+                (st['attributes']['name'] for st in service_types if st['id'] == service_type_id), ''
+            )
+            return render(request, 'band/pco_import.html', {
+                'phase': 'plans',
+                'service_types': service_types,
+                'plans': plans,
+                'selected_service_type_id': service_type_id,
+                'selected_service_type_name': service_type_name,
+                'filter': filter_type,
+            })
+
+        # ── Phase: preview a specific plan ────────────────────────────────────
+        elif action == 'preview':
+            service_type_id = request.POST.get('service_type_id', '')
+            plan_id = request.POST.get('plan_id', '')
+            service_type_name = request.POST.get('service_type_name', '')
+
+            plan = client.get_plan(service_type_id, plan_id)
+            items_resp = client.get_plan_items(service_type_id, plan_id)
+            raw_members = client.get_plan_team_members(service_type_id, plan_id)
+
+            songs_raw = parse_plan_songs(items_resp)
+            members_raw = parse_plan_members(raw_members)
+
+            service_date = (plan['attributes'].get('sort_date') or '')[:10]
+            service_name = plan['attributes'].get('title') or service_type_name
+
+            # Annotate songs with match status
+            songs_preview = []
+            for s in songs_raw:
+                existing = Song.objects.filter(title__iexact=s['title'], church=church).first()
+                songs_preview.append({**s, 'status': 'match' if existing else 'create', 'existing': existing})
+
+            # Annotate members with match status
+            members_preview = []
+            for m in members_raw:
+                existing = Person.objects.filter(name__iexact=m['name'], church=church).first()
+                members_preview.append({**m, 'status': 'match' if existing else 'create', 'existing': existing})
+
+            service_exists = Service.objects.filter(
+                church=church, service_date=service_date
+            ).first() if service_date else None
+
+            return render(request, 'band/pco_import.html', {
+                'phase': 'preview',
+                'plan_id': plan_id,
+                'service_type_id': service_type_id,
+                'service_type_name': service_type_name,
+                'service_date': service_date,
+                'service_name': service_name,
+                'songs_preview': songs_preview,
+                'members_preview': members_preview,
+                'service_exists': service_exists,
+            })
+
+        # ── Phase: confirm and import ─────────────────────────────────────────
+        elif action == 'confirm':
+            service_type_id = request.POST.get('service_type_id', '')
+            plan_id = request.POST.get('plan_id', '')
+            service_type_name = request.POST.get('service_type_name', '')
+
+            plan = client.get_plan(service_type_id, plan_id)
+            items_resp = client.get_plan_items(service_type_id, plan_id)
+            raw_members = client.get_plan_team_members(service_type_id, plan_id)
+
+            songs_raw = parse_plan_songs(items_resp)
+            members_raw = parse_plan_members(raw_members)
+
+            service_date_str = (plan['attributes'].get('sort_date') or '')[:10]
+            service_name = plan['attributes'].get('title') or service_type_name
+
+            # Generate plan_id
+            last_service = Service.objects.filter(church=church).order_by('-plan_id').first()
+            if last_service and last_service.plan_id.startswith('SV'):
+                try:
+                    next_sv = int(last_service.plan_id[2:]) + 1
+                except ValueError:
+                    next_sv = 1
+            else:
+                next_sv = 1
+            new_plan_id = f"SV{next_sv:03d}"
+
+            service = Service.objects.create(
+                plan_id=new_plan_id,
+                service_date=service_date_str,
+                service_name=service_name,
+                church=church,
+            )
+
+            # Create songs and service-song links
+            last_song = Song.objects.filter(church=church).order_by('-song_id').first()
+            if last_song and last_song.song_id.startswith('S'):
+                try:
+                    next_sn = int(last_song.song_id[1:]) + 1
+                except ValueError:
+                    next_sn = 1
+            else:
+                next_sn = 1
+
+            for order, s in enumerate(songs_raw, start=1):
+                song = Song.objects.filter(title__iexact=s['title'], church=church).first()
+                if not song:
+                    length_str = ''
+                    if s['length_seconds']:
+                        sec = s['length_seconds']
+                        length_str = f"{sec // 60}:{sec % 60:02d}"
+                    song = Song.objects.create(
+                        song_id=f"S{next_sn:03d}",
+                        title=s['title'],
+                        artist=s['artist'],
+                        default_key=s['key'] or '',
+                        length=length_str,
+                        times_used=0,
+                        church=church,
+                    )
+                    next_sn += 1
+                song.times_used += 1
+                song.save()
+                length_min = s['length_seconds'] // 60 if s['length_seconds'] else None
+                ServiceSong.objects.create(
+                    service=service,
+                    song=song,
+                    song_order=order,
+                    key_used=s['key'] or song.default_key,
+                    length=length_min,
+                )
+
+            # Create people and service-member links
+            last_person = Person.objects.filter(church=church).order_by('-person_id').first()
+            if last_person and last_person.person_id.startswith('P'):
+                try:
+                    next_pn = int(last_person.person_id[1:]) + 1
+                except ValueError:
+                    next_pn = 1
+            else:
+                next_pn = 1
+
+            for m in members_raw:
+                person = Person.objects.filter(name__iexact=m['name'], church=church).first()
+                if not person:
+                    person = Person.objects.create(
+                        person_id=f"P{next_pn:03d}",
+                        name=m['name'],
+                        role='instrumentalist',
+                        church=church,
+                    )
+                    next_pn += 1
+                ServiceMember.objects.get_or_create(
+                    service=service,
+                    person=person,
+                    defaults={'role': m['role']},
+                )
+
+            messages.success(request, f'Imported "{service_name}" from Planning Center.')
+            return redirect('band:service_detail', plan_id=new_plan_id)
+
+    except Exception as e:
+        messages.error(request, f'Planning Center error: {e}')
+        return redirect('band:pco_import')
+
+    # ── Phase: select service type (GET) ──────────────────────────────────────
+    try:
+        service_types = client.get_service_types()
+    except Exception as e:
+        messages.error(request, f'Could not reach Planning Center: {e}')
+        service_types = []
+
+    return render(request, 'band/pco_import.html', {
+        'phase': 'select',
+        'service_types': service_types,
+    })
+
+
+@login_required
+@admin_required
 def import_services(request):
     """Unified import page for CSV and PDF files"""
     if request.method == 'POST':

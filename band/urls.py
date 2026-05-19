@@ -32,6 +32,8 @@ urlpatterns = [
     path('song-finder/', views.song_finder, name='song_finder'),
     path('import/', views.import_services, name='import_services'),
     path('import/confirm-pdf/', views.confirm_pdf_import, name='confirm_pdf_import'),
+    path('pco/connect/', views.pco_connect, name='pco_connect'),
+    path('pco/import/', views.pco_import, name='pco_import'),
     path('download-template/', views.download_csv_template, name='download_csv_template'),
     # SuperAdmin: Church management
     path('churches/', views.church_list, name='church_list'),

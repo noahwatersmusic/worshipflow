@@ -18,6 +18,17 @@
             <strong>PDF File</strong><br>
             <small style="color: #7f8c8d;">Import from Planning Center</small>
         </button>
+        {% if active_church.pco_connected %}
+        <a href="{% url 'band:pco_import' %}" class="import-type-btn" style="padding: 20px 40px; font-size: 16px; border: 2px solid #27ae60; background: white; color: #27ae60; border-radius: 8px; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; text-align: center;">
+            <strong>Planning Center</strong><br>
+            <small style="color: #7f8c8d;">Import directly from PCO</small>
+        </a>
+        {% else %}
+        <a href="{% url 'band:pco_connect' %}" class="import-type-btn" style="padding: 20px 40px; font-size: 16px; border: 2px dashed #bdc3c7; background: white; color: #95a5a6; border-radius: 8px; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; text-align: center;">
+            <strong>Planning Center</strong><br>
+            <small style="color: #bdc3c7;">Connect to enable</small>
+        </a>
+        {% endif %}
     </div>
 </div>
 

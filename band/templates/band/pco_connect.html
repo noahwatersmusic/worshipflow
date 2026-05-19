@@ -1,0 +1,55 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Planning Center — SideNote{% endblock %}
+
+{% block content %}
+<h2>Planning Center Integration</h2>
+
+{% if messages %}
+<div style="margin-bottom: 20px;">
+    {% for message in messages %}
+    <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px;
+        {% if message.tags == 'error' %}background: #e74c3c; color: white;
+        {% elif message.tags == 'warning' %}background: #f39c12; color: white;
+        {% else %}background: #27ae60; color: white;{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if church.pco_connected %}
+<div class="card">
+    <h3>Status: Connected</h3>
+    <p style="margin-bottom: 15px;">This church is connected to Planning Center. You can import services directly from PCO.</p>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <a href="{% url 'band:pco_import' %}" class="btn" style="background: #27ae60;">Import from Planning Center</a>
+        <form method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disconnect">
+            <button type="submit" style="background: #e74c3c;">Disconnect</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Update Credentials</h3>
+    <p style="margin-bottom: 15px; color: #7f8c8d;">Re-enter credentials below to update your connection.</p>
+    {% include "band/pco_connect_form.html" %}
+</div>
+
+{% else %}
+<div class="card">
+    <h3>Connect to Planning Center</h3>
+    <ol style="line-height: 2; margin-bottom: 20px;">
+        <li>Log in to <strong>Planning Center</strong> and click your name in the top right</li>
+        <li>Go to <strong>My Account &rarr; Developer &rarr; Personal Access Tokens</strong></li>
+        <li>Click <strong>New Personal Access Token</strong>, give it a name (e.g., "SideNote")</li>
+        <li>Copy the <strong>Application ID</strong> and <strong>Secret</strong> and paste them below</li>
+    </ol>
+    {% include "band/pco_connect_form.html" %}
+</div>
+{% endif %}
+
+<p><a href="{% url 'band:import_services' %}">&larr; Back to Import</a></p>
+{% endblock %}

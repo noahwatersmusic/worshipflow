@@ -9,6 +9,8 @@ class Church(models.Model):
     slug = models.SlugField(max_length=200, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    pco_app_id = models.CharField(max_length=200, blank=True, default='')
+    pco_secret = models.CharField(max_length=200, blank=True, default='')
 
     class Meta:
         ordering = ['name']
@@ -16,6 +18,10 @@ class Church(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def pco_connected(self):
+        return bool(self.pco_app_id and self.pco_secret)
 
 
 class UserProfile(models.Model):

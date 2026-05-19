@@ -1,0 +1,217 @@
+{% extends 'band/base.html' %}
+
+{% block title %}Import from Planning Center — SideNote{% endblock %}
+
+{% block content %}
+<h2>Import from Planning Center</h2>
+
+{% if messages %}
+<div style="margin-bottom: 20px;">
+    {% for message in messages %}
+    <div style="padding: 12px; margin-bottom: 10px; border-radius: 4px;
+        {% if message.tags == 'error' %}background: #e74c3c; color: white;
+        {% elif message.tags == 'warning' %}background: #f39c12; color: white;
+        {% else %}background: #27ae60; color: white;{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
+{# ─── Phase: select service type ─────────────────────────────────────────── #}
+{% if phase == 'select' %}
+<div class="card">
+    <h3>Select Service Type</h3>
+    {% if service_types %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="list_plans">
+        <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 15px;">
+            <div class="filter-group">
+                <label for="service_type_id">Service Type</label>
+                <select name="service_type_id" id="service_type_id" required
+                        style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 220px;">
+                    {% for st in service_types %}
+                    <option value="{{ st.id }}">{{ st.attributes.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter">Show</label>
+                <select name="filter" id="filter"
+                        style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="future">Upcoming plans</option>
+                    <option value="past">Past plans</option>
+                    <option value="noPlan">No plan</option>
+                </select>
+            </div>
+            <button type="submit" style="background: #3498db;">View Plans</button>
+        </div>
+    </form>
+    {% else %}
+    <p style="color: #7f8c8d;"><em>No service types found. Make sure your Planning Center credentials are correct.</em></p>
+    <a href="{% url 'band:pco_connect' %}" class="btn" style="margin-top: 10px;">Reconnect</a>
+    {% endif %}
+</div>
+
+
+{# ─── Phase: list plans ───────────────────────────────────────────────────── #}
+{% elif phase == 'plans' %}
+<div class="card">
+    <h3>{{ selected_service_type_name }} — Plans</h3>
+    {% if plans %}
+    <table style="margin-top: 15px;">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th style="width: 120px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in plans %}
+            <tr>
+                <td>{{ plan.attributes.dates }}</td>
+                <td>{{ plan.attributes.title|default:selected_service_type_name }}</td>
+                <td>
+                    <form method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="preview">
+                        <input type="hidden" name="service_type_id" value="{{ selected_service_type_id }}">
+                        <input type="hidden" name="service_type_name" value="{{ selected_service_type_name }}">
+                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                        <button type="submit" style="padding: 4px 14px; font-size: 13px; background: #3498db;">Preview</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #7f8c8d; margin-top: 15px;"><em>No plans found for this filter.</em></p>
+    {% endif %}
+</div>
+
+<div style="margin-top: 10px;">
+    <form method="post" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="list_plans">
+        <input type="hidden" name="service_type_id" value="{{ selected_service_type_id }}">
+        <input type="hidden" name="filter" value="{% if filter == 'future' %}past{% else %}future{% endif %}">
+        <button type="submit" style="background: #95a5a6; padding: 6px 14px; font-size: 13px;">
+            Show {% if filter == 'future' %}past{% else %}upcoming{% endif %} plans instead
+        </button>
+    </form>
+    &nbsp;
+    <a href="{% url 'band:pco_import' %}" style="font-size: 13px; color: #7f8c8d;">&larr; Change service type</a>
+</div>
+
+
+{# ─── Phase: preview plan ─────────────────────────────────────────────────── #}
+{% elif phase == 'preview' %}
+
+{% if service_exists %}
+<div style="padding: 12px; margin-bottom: 20px; border-radius: 4px; background: #f39c12; color: white;">
+    A service on <strong>{{ service_date }}</strong> already exists
+    (<a href="{% url 'band:service_detail' service_exists.plan_id %}" style="color: white; text-decoration: underline;">{{ service_exists.service_name }}</a>).
+    Importing will create a separate additional service.
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Service Preview</h3>
+    <p><strong>Date:</strong> {{ service_date }}</p>
+    <p style="margin-top: 6px;"><strong>Name:</strong> {{ service_name }}</p>
+</div>
+
+<div class="card">
+    <h3>Songs ({{ songs_preview|length }})</h3>
+    {% if songs_preview %}
+    <table style="margin-top: 10px;">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Key</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in songs_preview %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{% if s.existing %}<a href="{% url 'band:song_detail' s.existing.song_id %}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</td>
+                <td>{{ s.artist|default:"—" }}</td>
+                <td><strong>{{ s.key|default:"—" }}</strong></td>
+                <td>
+                    {% if s.status == 'match' %}
+                    <span class="badge badge-success">Match</span>
+                    {% else %}
+                    <span class="badge badge-info">Will create</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #7f8c8d; margin-top: 10px;"><em>No songs found in this plan.</em></p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Band Roster ({{ members_preview|length }})</h3>
+    {% if members_preview %}
+    <table style="margin-top: 10px;">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in members_preview %}
+            <tr>
+                <td>{% if m.existing %}<a href="{% url 'band:person_detail' m.existing.person_id %}">{{ m.name }}</a>{% else %}{{ m.name }}{% endif %}</td>
+                <td>{{ m.role|default:"—" }}</td>
+                <td>
+                    {% if m.status == 'match' %}
+                    <span class="badge badge-success">Match</span>
+                    {% else %}
+                    <span class="badge badge-info">Will create</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #7f8c8d; margin-top: 10px;"><em>No confirmed team members in this plan.</em></p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Confirm Import</h3>
+    <p style="margin-bottom: 15px;">
+        Songs and people marked <strong>Will create</strong> will be added to your library automatically.
+        Songs marked <strong>Match</strong> will be linked to your existing records.
+    </p>
+    <form method="post" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <input type="hidden" name="service_type_id" value="{{ service_type_id }}">
+        <input type="hidden" name="service_type_name" value="{{ service_type_name }}">
+        <input type="hidden" name="plan_id" value="{{ plan_id }}">
+        <button type="submit" style="background: #27ae60;">Import Service</button>
+    </form>
+    <a href="{% url 'band:pco_import' %}" style="margin-left: 15px; font-size: 13px; color: #7f8c8d;">Cancel</a>
+</div>
+
+{% endif %}
+
+
+<p style="margin-top: 20px;"><a href="{% url 'band:import_services' %}">&larr; Back to Import</a></p>
+{% endblock %}

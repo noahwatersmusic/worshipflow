@@ -1,0 +1,20 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; max-width: 700px;">
+        <div class="filter-group">
+            <label for="pco_app_id">Application ID</label>
+            <input type="text" id="pco_app_id" name="pco_app_id"
+                   value="{{ church.pco_app_id }}"
+                   placeholder="Paste your PCO Application ID"
+                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+        </div>
+        <div class="filter-group">
+            <label for="pco_secret">Secret</label>
+            <input type="password" id="pco_secret" name="pco_secret"
+                   placeholder="Paste your PCO Secret"
+                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%;">
+        </div>
+    </div>
+    <button type="submit" style="background: #3498db;">Save &amp; Test Connection</button>
+</form>
