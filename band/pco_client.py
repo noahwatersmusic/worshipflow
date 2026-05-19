@@ -80,6 +80,19 @@ def parse_plan_songs(items_response):
     return songs
 
 
+_VOCALIST_KEYWORDS = {
+    'vocal', 'voice', 'singer', 'singing', 'worship lead', 'worship leader',
+    'lead vocal', 'background vocal', 'bgv', 'harmony',
+}
+
+def infer_person_role(position_name):
+    """Guess vocalist/instrumentalist from a PCO team position name."""
+    lower = position_name.lower()
+    if any(kw in lower for kw in _VOCALIST_KEYWORDS):
+        return 'vocalist'
+    return 'instrumentalist'
+
+
 def parse_plan_members(team_members):
     """
     Given the raw team_members list, return dicts for non-declined members:

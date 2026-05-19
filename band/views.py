@@ -561,7 +561,7 @@ def pco_import(request):
         messages.error(request, 'Connect to Planning Center first.')
         return redirect('band:pco_connect')
 
-    from .pco_client import PCOClient, parse_plan_songs, parse_plan_members
+    from .pco_client import PCOClient, parse_plan_songs, parse_plan_members, infer_person_role
     client = PCOClient(church.pco_app_id, church.pco_secret)
 
     action = request.POST.get('action', '') if request.method == 'POST' else ''
@@ -607,11 +607,12 @@ def pco_import(request):
                 existing = Song.objects.filter(title__iexact=s['title'], church=church).first()
                 songs_preview.append({**s, 'status': 'match' if existing else 'create', 'existing': existing})
 
-            # Annotate members with match status
+            # Annotate members with match status and inferred role for new people
             members_preview = []
             for m in members_raw:
                 existing = Person.objects.filter(name__iexact=m['name'], church=church).first()
-                members_preview.append({**m, 'status': 'match' if existing else 'create', 'existing': existing})
+                inferred = infer_person_role(m['role']) if not existing else ''
+                members_preview.append({**m, 'status': 'match' if existing else 'create', 'existing': existing, 'inferred_role': inferred})
 
             service_exists = Service.objects.filter(
                 church=church, service_date=service_date
@@ -701,6 +702,16 @@ def pco_import(request):
                     length=length_min,
                 )
 
+            # Build admin-designated roles for new people from preview form
+            admin_roles = {}
+            i = 0
+            while f"member_name_{i}" in request.POST:
+                name_key = request.POST[f"member_name_{i}"].lower()
+                role_val = request.POST.get(f"member_person_role_{i}", '')
+                if role_val:
+                    admin_roles[name_key] = role_val
+                i += 1
+
             # Create people and service-member links
             last_person = Person.objects.filter(church=church).order_by('-person_id').first()
             if last_person and last_person.person_id.startswith('P'):
@@ -714,10 +725,11 @@ def pco_import(request):
             for m in members_raw:
                 person = Person.objects.filter(name__iexact=m['name'], church=church).first()
                 if not person:
+                    person_role = admin_roles.get(m['name'].lower(), 'instrumentalist')
                     person = Person.objects.create(
                         person_id=f"P{next_pn:03d}",
                         name=m['name'],
-                        role='instrumentalist',
+                        role=person_role,
                         church=church,
                     )
                     next_pn += 1

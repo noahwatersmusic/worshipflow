@@ -119,6 +119,14 @@
 </div>
 {% endif %}
 
+{# One form wraps everything so role selects submit with the confirm button #}
+<form method="post">
+{% csrf_token %}
+<input type="hidden" name="action" value="confirm">
+<input type="hidden" name="service_type_id" value="{{ service_type_id }}">
+<input type="hidden" name="service_type_name" value="{{ service_type_name }}">
+<input type="hidden" name="plan_id" value="{{ plan_id }}">
+
 <div class="card">
     <h3>Service Preview</h3>
     <p><strong>Date:</strong> {{ service_date }}</p>
@@ -146,11 +154,8 @@
                 <td>{{ s.artist|default:"—" }}</td>
                 <td><strong>{{ s.key|default:"—" }}</strong></td>
                 <td>
-                    {% if s.status == 'match' %}
-                    <span class="badge badge-success">Match</span>
-                    {% else %}
-                    <span class="badge badge-info">Will create</span>
-                    {% endif %}
+                    {% if s.status == 'match' %}<span class="badge badge-success">Match</span>
+                    {% else %}<span class="badge badge-info">Will create</span>{% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -168,21 +173,33 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Role</th>
+                <th>PCO Position</th>
+                <th>SideNote Role</th>
                 <th>Status</th>
             </tr>
         </thead>
         <tbody>
             {% for m in members_preview %}
             <tr>
+                {# Hidden fields so confirm can read name→role mapping #}
+                <input type="hidden" name="member_name_{{ forloop.counter0 }}" value="{{ m.name }}">
                 <td>{% if m.existing %}<a href="{% url 'band:person_detail' m.existing.person_id %}">{{ m.name }}</a>{% else %}{{ m.name }}{% endif %}</td>
                 <td>{{ m.role|default:"—" }}</td>
                 <td>
                     {% if m.status == 'match' %}
-                    <span class="badge badge-success">Match</span>
+                    <span style="color: #7f8c8d; font-size: 13px;">{{ m.existing.get_role_display }}</span>
                     {% else %}
-                    <span class="badge badge-info">Will create</span>
+                    <select name="member_person_role_{{ forloop.counter0 }}"
+                            style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                        <option value="vocalist" {% if m.inferred_role == 'vocalist' %}selected{% endif %}>Vocalist</option>
+                        <option value="instrumentalist" {% if m.inferred_role == 'instrumentalist' %}selected{% endif %}>Instrumentalist</option>
+                        <option value="both">Both</option>
+                    </select>
                     {% endif %}
+                </td>
+                <td>
+                    {% if m.status == 'match' %}<span class="badge badge-success">Match</span>
+                    {% else %}<span class="badge badge-info">Will create</span>{% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -198,17 +215,13 @@
     <p style="margin-bottom: 15px;">
         Songs and people marked <strong>Will create</strong> will be added to your library automatically.
         Songs marked <strong>Match</strong> will be linked to your existing records.
+        Adjust any <strong>SideNote Role</strong> designations above before confirming.
     </p>
-    <form method="post" style="display: inline;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="confirm">
-        <input type="hidden" name="service_type_id" value="{{ service_type_id }}">
-        <input type="hidden" name="service_type_name" value="{{ service_type_name }}">
-        <input type="hidden" name="plan_id" value="{{ plan_id }}">
-        <button type="submit" style="background: #27ae60;">Import Service</button>
-    </form>
+    <button type="submit" style="background: #27ae60;">Import Service</button>
     <a href="{% url 'band:pco_import' %}" style="margin-left: 15px; font-size: 13px; color: #7f8c8d;">Cancel</a>
 </div>
+
+</form>
 
 {% endif %}
 
